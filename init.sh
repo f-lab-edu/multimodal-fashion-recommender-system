@@ -7,9 +7,7 @@ set -euo pipefail
 PROJECT_NAME="${PROJECT_NAME:-fashion_recommand}"
 PYTHON_BIN="${PYTHON_BIN:-python3.11}"
 VENV_DIR="${VENV_DIR:-.venv}"
-REQ_FILE="${REQ_FILE:-requirements.txt}"     # 없으면 자동 생성
-USE_DOCKER="${USE_DOCKER:-0}"                # 1이면 compose까지 올림
-USE_NODE="${USE_NODE:-0}"                    # 1이면 node 의존 설치
+REQ_FILE="${REQ_FILE:-requirements.txt}"    
 SETUP_SYSTEM_DEPS="${SETUP_SYSTEM_DEPS:-1}"  # 1이면 apt 설치 진행(WSL/Ubuntu)
 
 # -----------------------------
@@ -48,15 +46,8 @@ if [[ "$SETUP_SYSTEM_DEPS" == "1" ]]; then
 
     sudo apt update -y
     sudo apt install -y \
-      curl gnupg lsb-release ca-certificates \
-      gcc g++ make cmake build-essential clang llvm pkgconf texinfo \
-      gcc-multilib g++-multilib \
-      libbpf-dev libelf-dev linux-tools-common linux-tools-generic \
-      gawk bison gettext \
-      sqlite3 libsqlite3-dev \
-      zlib1g-dev libzstd-dev \
-      docker.io \
-      openjdk-17-jdk locales python3-venv
+      ca-certificates build-essential cmake pkgconf \
+      python3-venv curl gnupg locales
 
     # 로케일(필요시)
     sudo locale-gen en_US.UTF-8 || true
@@ -87,34 +78,8 @@ source "$VENV_DIR/bin/activate"
 
 
 # -----------------------------
-# 요구사항 파일 준비(없으면 생성)
+# 요구사항 파일 준비
 # -----------------------------
-if [[ ! -f "$REQ_FILE" ]]; then
-  warn "$REQ_FILE 이 없어 기본 템플릿을 생성합니다."
-  cat > "$REQ_FILE" <<'EOF'
-# 기본 예시 — 필요에 맞게 수정하세요
-# PyTorch CUDA 휠 인덱스
---extra-index-url https://download.pytorch.org/whl/cu121
-
-# Core DL (CUDA)
-torch==2.4.0          #######버전확인 일단 구버전 설치
-torchvision==0.19.0   #######버전확인 일단 구버전 설치
-
-# Utils / Numerics
-numpy==1.23.5
-Pillow==10.4.0
-
-# Embedding / Models
-open_clip_torch==2.26.1   #######버전확인 일단 구버전 설치
-timm==1.0.9
-transformers==4.45.2
-tokenizers==0.20.0
-safetensors==0.4.5
-
-# Vector Search (GPU)
-faiss-gpu-cu12==1.12.0
-EOF
-fi
-
+pip install -U pip setuptools wheel
 info "Python 패키지 설치: $REQ_FILE"
 pip install -r "$REQ_FILE"
