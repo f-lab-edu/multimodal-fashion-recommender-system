@@ -1,87 +1,18 @@
 from __future__ import annotations
-import re
 from typing import Dict, Set
 from app.preprocess.slots.schema import Slots
 from app.preprocess.slots.registry import load_all, load_default_all
 
+from app.preprocess.stopwordfilter import StopwordFilter
+from app.preprocess.normalizer import Normalizer
+from app.preprocess.phrase_extractor import PhraseExtractor
+from app.preprocess.tokenizer import Tokenizer
+from app.preprocess.rules import RulesEngine
 
 # --------------------------
-# 구성요소들(간단 구현)
+# 실행 코드
+# python -m app.test.preprocess_demo
 # --------------------------
-class Normalizer:
-    """한→영 동의어 치환 + 소문자화 + 공백 정리"""
-
-    def __init__(self, synonyms: Dict[str, str]):
-        # 긴 키워드 먼저 치환되도록 정렬
-        items = sorted(synonyms.items(), key=lambda kv: len(kv[0]), reverse=True)
-        self._patterns = [
-            (
-                re.compile(
-                    rf"(?<![가-힣A-Za-z0-9]){re.escape(k)}(?![가-힣A-Za-z0-9])",
-                    re.IGNORECASE,
-                ),
-                v,
-            )
-            for k, v in items
-        ]
-
-    def __call__(self, text: str) -> str:
-        t = text
-        for pat, val in self._patterns:
-            t = pat.sub(val, t)
-        return re.sub(r"\s+", " ", t).strip().lower()
-
-
-class StopwordFilter:
-    def __init__(self, stopwords: Set[str]):
-        self._stop = set(stopwords)
-
-    def __call__(self, text: str) -> str:
-        return " ".join(tok for tok in text.split() if tok not in self._stop)
-
-
-class PhraseExtractor:
-    def __init__(self, phrases: Set[str]):
-        self._phrases = set(phrases)
-
-    def __call__(self, text: str) -> Set[str]:
-        found = set()
-        for ph in self._phrases:
-            if re.search(rf"(?<![A-Za-z0-9]){re.escape(ph)}(?![A-Za-z0-9])", text):
-                found.add(ph)
-        return found
-
-
-class Tokenizer:
-    def __call__(self, text: str) -> Set[str]:
-        parts = re.split(r"\s+", text.strip())
-        toks: Set[str] = set()
-        for p in parts:
-            if not p:
-                continue
-            toks.add(p)
-            if "-" in p:
-                toks.update(p.split("-"))
-        return toks
-
-
-class RulesEngine:
-    """경량 규칙: high+rise, 혼방(material-blend) 등"""
-
-    def __init__(self, materials: Set[str]):
-        self._materials = set(materials)
-
-    def __call__(self, tokens: Set[str]) -> Set[str]:
-        toks = set(t.lower() for t in tokens if t)
-        # high + rise → high-rise
-        if "high" in toks and "rise" in toks:
-            toks.add("high-rise")
-        # 혼방: material + 'blend' → '{material}-blend'
-        if "blend" in toks:
-            for m in self._materials:
-                if m != "blend" and m in toks:
-                    toks.add(f"{m}-blend")
-        return toks
 
 
 # --------------------------
