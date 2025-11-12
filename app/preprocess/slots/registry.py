@@ -25,13 +25,6 @@ class PreprocessConfig:
 # --------------------------
 # 내부 유틸
 # --------------------------
-def _need_yaml():
-    if yaml is None:
-        raise RuntimeError(
-            "PyYAML이 필요합니다. `pip install pyyaml` 후 다시 시도하세요."
-        )
-
-
 def _build_alias_from_syn(syn: Dict[str, str], allowed: Set[str]) -> Dict[str, str]:
     """
     SYN(KO->EN) 중 EN이 해당 슬롯의 allowed에 존재할 때만 별칭으로 채택.
@@ -54,7 +47,6 @@ def load_from_yaml(path: str) -> Slots:
     - aliases: 수동 별칭
     - synonyms: KO->EN은 슬롯 alias로 '필요한 것만' 흡수
     """
-    _need_yaml()
     with open(path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
@@ -123,7 +115,6 @@ def load_all(path: str) -> Tuple[Slots, PreprocessConfig]:
     - slots.*: 허용어/별칭
     - synonyms/stopwords/garments_phrases/materials: 전처리 파이프라인 입력
     """
-    _need_yaml()
     with open(path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
