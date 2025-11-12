@@ -22,7 +22,7 @@ class ClipImageEncoder:
         self.model.eval()
         self.image_size = image_size
 
-    def encode_pil(self, imgs: list[Image.Image]) -> np.ndarray:
+    def encode_image(self, imgs: list[Image.Image]) -> np.ndarray:
         with torch.no_grad():
             batch = torch.stack([self.preprocess(img) for img in imgs]).to(self.device)
             z = self.model.encode_image(batch)
