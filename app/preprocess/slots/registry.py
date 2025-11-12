@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Set, Tuple
 from .schema import Slot, Slots
+import os
 
 # 외부 의존성: PyYAML
 try:
@@ -115,10 +116,18 @@ def load_all(path: str) -> Tuple[Slots, PreprocessConfig]:
     - slots.*: 허용어/별칭
     - synonyms/stopwords/garments_phrases/materials: 전처리 파이프라인 입력
     """
-    with open(path, "r", encoding="utf-8") as f:
+    if path is None:
+        config_path = os.path.join(os.path.dirname(__file__), "defaults.yaml")
+    else:
+        # 2) path가 디렉터리면 defaults.yaml 붙이고, 파일이면 그대로 사용
+        config_path = (
+            os.path.join(path, "defaults.yaml") if os.path.isdir(path) else path
+        )
+
+    with open(config_path, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
-    slots = load_from_yaml(path)
+    slots = load_from_yaml(config_path)
 
     syn = {str(k): str(v) for k, v in cfg.get("synonyms", {}).items()}
     stopwords = set(cfg.get("stopwords", []))
@@ -129,23 +138,3 @@ def load_all(path: str) -> Tuple[Slots, PreprocessConfig]:
         synonyms=syn, stopwords=stopwords, garments_phrases=phrases, materials=materials
     )
     return slots, ppconf
-
-
-def load_default() -> Slots:
-    """
-    기본 Slots만 로드 (defaults.yaml 사용)
-    """
-    import os
-
-    here = os.path.dirname(__file__)
-    return load_from_yaml(os.path.join(here, "defaults.yaml"))
-
-
-def load_default_all() -> Tuple[Slots, PreprocessConfig]:
-    """
-    기본 Slots와 전처리 설정을 함께 로드 (defaults.yaml 사용)
-    """
-    import os
-
-    here = os.path.dirname(__file__)
-    return load_all(os.path.join(here, "defaults.yaml"))

@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Dict, Set
 from app.preprocess.slots.schema import Slots
-from app.preprocess.slots.registry import load_all, load_default_all
+from app.preprocess.slots.registry import load_all
 
-from app.preprocess.stopwordfilter import StopwordFilter
+from app.preprocess.stopword_filter import StopwordFilter
 from app.preprocess.normalizer import Normalizer
 from app.preprocess.phrase_extractor import PhraseExtractor
 from app.preprocess.tokenizer import Tokenizer
@@ -49,10 +49,7 @@ class QueryPipeline:
     def from_yaml(
         cls, path: str | None = None, *, max_tokens_hint: int = 64
     ) -> "QueryPipeline":
-        if path is None:
-            slots, pp = load_default_all()
-        else:
-            slots, pp = load_all(path)
+        slots, pp = load_all(path)
         return cls(
             synonyms=pp.synonyms,
             stopwords=pp.stopwords,
