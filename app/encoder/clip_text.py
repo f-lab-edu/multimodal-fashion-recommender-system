@@ -37,6 +37,3 @@ class ClipTextEncoder:
         # x = np.random.rand(len(texts), D).astype(np.float32)
         # x /= (np.linalg.norm(x, axis=1, keepdims=True) + 1e-9)
         # return x
-
-
-DummyClip = ClipTextEncoder
