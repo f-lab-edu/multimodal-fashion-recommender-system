@@ -9,6 +9,7 @@ torchvision==0.19.0
 # Utils / Numerics
 numpy==1.23.5
 Pillow==10.4.0
+pandas==2.2.2
 
 # Embedding / Models
 open_clip_torch==2.26.1
@@ -19,3 +20,6 @@ safetensors==0.4.5
 
 # Vector Search (GPU)
 faiss-gpu-cu12==1.12.0
+
+notebook==6.5.4
+ipykernel==6.28.0

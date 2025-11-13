@@ -1,0 +1,107 @@
+# 슬롯 목록(허용값) + 별칭 + 동의어(SYN: KO->EN)
+slots:
+  colors: ["black","white","gray","grey","navy","blue","light-blue","dark-blue","beige","ivory",
+           "red","pink","green","brown","yellow","orange","purple","khaki","charcoal","burgundy","cream"]
+  materials: ["linen","cotton","denim","wool","cashmere","polyester","nylon","rayon","viscose","modal",
+              "tencel","lyocell","leather","silk","spandex","elastane","blend",
+              "silk-blend","cashmere-blend","wool-blend","cotton-blend","polyester-blend"]
+  garments_words: ["shirt","blouse","t-shirt","one-piece","dress","skirt","pants","jeans","shorts",
+                   "jacket","coat","puffer","hoodie","sweatshirt","cardigan","vest",
+                   "sneakers","loafers","sandals","slippers","bag","backpack"]
+  garments_phrases: ["dress shoes","tote bag","crossbody bag"]
+  fits: ["slim","regular","relaxed","oversized","loose","fitted"]
+  lengths: ["mini","midi","maxi","cropped","cropped-pants"]
+  seasons: ["summer","spring","fall","winter","lightweight","breathable","thermal","fleece"]
+  styles: ["casual","formal","officewear","dandy","street","hip-hop","dance"]
+
+# 직접 지정 별칭(있으면 allowed 검증 통과 후 적용)
+aliases:
+  color: {"dk-blue": "dark-blue", "lt-blue": "light-blue", "grey": "gray"}
+  material: {}
+  garment: {"남방": "shirt"}
+  fit: {}
+  length: {}
+  season: {}
+  style: {}
+
+# KO->EN 동의어(SYN) - registry가 allowed에 맞는 항목만 alias로 흡수
+synonyms:
+  여름: summer
+  봄: spring
+  가을: fall
+  겨울: winter
+  캐주얼: casual
+  정장: formal
+  오피스룩: officewear
+  댄디: dandy
+  스트릿: street
+  힙합: hip-hop
+  댄스: dance
+  린넨: linen
+  리넨: linen
+  면: cotton
+  울: wool
+  가죽: leather
+  실크: silk
+  혼방: blend
+  폴리: polyester
+  폴리에스터: polyester
+  캐시미어: cashmere
+  데님: denim
+  스판: spandex
+  엘라스틴: elastane
+  반팔: short-sleeve
+  긴팔: long-sleeve
+  민소매: sleeveless
+  반바지: shorts
+  긴바지: pants
+  7부바지: cropped-pants
+  셔츠: shirt
+  남방: shirt
+  블라우스: blouse
+  티셔츠: t-shirt
+  자켓: jacket
+  치마: skirt
+  바지: pants
+  청바지: jeans
+  원피스: one-piece
+  드레스: dress
+  코트: coat
+  패딩: puffer
+  맨투맨: sweatshirt
+  후드티: hoodie
+  가디건: cardigan
+  베스트: vest
+  운동화: sneakers
+  스니커즈: sneakers
+  구두: "dress shoes"
+  로퍼: loafers
+  샌들: sandals
+  슬리퍼: slippers
+  가방: bag
+  백팩: backpack
+  토트백: "tote bag"
+  크로스백: "crossbody bag"
+  네이비: navy
+  아이보리: ivory
+  베이지: beige
+  회색: gray
+  청색: blue
+  하늘색: light-blue
+  검정: black
+  하양: white
+  빨강: red
+  노랑: yellow
+  초록: green
+  카키: khaki
+  크림: cream
+  연청: light-blue
+  진청: dark-blue
+  챠콜: charcoal
+  밤색: brown
+  버건디: burgundy
+  보라: purple
+  주황: orange
+
+
+stopwords: ["추천","추천해줘","찾아줘","알려줘","좀","해주세요","해주세요.","해줘","원해","같은","느낌","스타일"]
