@@ -9,11 +9,6 @@ from app.preprocess.phrase_extractor import PhraseExtractor
 from app.preprocess.tokenizer import Tokenizer
 from app.preprocess.rules import RulesEngine
 
-# --------------------------
-# 실행 코드
-# python -m app.test.preprocess_demo
-# --------------------------
-
 
 # --------------------------
 # 최종 파이프라인
