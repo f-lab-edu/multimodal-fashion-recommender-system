@@ -8,9 +8,18 @@ import json
 
 
 class ResourceLoader:
+    """
+    아마존 패션 JSONL 카탈로그를 불러와 전처리된 DataFrame으로 제공하는 로더.
+
+    - 최초 1회: JSONL -> DataFrame -> 전처리 -> parquet로 디스크 캐시
+    - 이후    : parquet 캐시가 있으면 그걸 읽어서 사용
+    - 같은 프로세스 안에서는 _cached_df를 통해 메모리에서도 1번만 로드
+    """
+
     # 외부에서 JSONL 경로 지정
     def __init__(self, catalog_path: str | Path):
         self.catalog_path = Path(catalog_path)
+        self.cache_path = self.catalog_path.with_suffix(".pkl")
 
     def choose_main_image(self, images: list) -> str | None:
         """
@@ -88,6 +97,15 @@ class ResourceLoader:
         JSONL 파일을 한 줄씩 읽어서 DataFrame으로 변환.
         - 빈 줄은 건너뜀
         """
+        # 이미 전처리된 파일을 사용하는 경우
+        if self.cache_path.exists():
+            print(
+                f"[ResourceLoader] Loading catalog from pickle cache: {self.cache_path}"
+            )
+            return pd.read_pickle(self.cache_path)
+
+        # 2) 없으면 JSONL 파일에서 로드
+        print(f"[ResourceLoader] Building catalog from JSONL: {self.catalog_path}")
         records = []
         with self.catalog_path.open("r", encoding="utf-8") as f:
             for line in f:
@@ -98,4 +116,10 @@ class ResourceLoader:
 
         df = pd.DataFrame(records)
         df = self.preprocess_catalog_df(df)
+
+        # 3) 전처리 결과를 parquet로 저장
+        self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+        print(f"[ResourceLoader] Saving pickle cache to: {self.cache_path}")
+        df.to_pickle(self.cache_path)
+
         return df
