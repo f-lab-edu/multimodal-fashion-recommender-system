@@ -4,10 +4,14 @@ import pandas as pd
 import json
 
 
-CATALOG_JSONL_PATH = Path("data/meta_Amazon_Fashion_v1.jsonl")
+# CATALOG_JSONL_PATH = Path("data/meta_Amazon_Fashion_v1.jsonl")
 
 
 class ResourceLoader:
+    # 외부에서 JSONL 경로 지정
+    def __init__(self, catalog_path: str | Path):
+        self.catalog_path = Path(catalog_path)
+
     def choose_main_image(self, images: list) -> str | None:
         """
         images 리스트에서 hi_res > large > thumb 순으로 하나 선택.
@@ -80,15 +84,12 @@ class ResourceLoader:
         return df
 
     def get_catalog_df(self) -> pd.DataFrame:
-        # df = pd.read_json(CATALOG_JSONL_PATH, lines=True)
-        # df = self.preprocess_catalog_df(df)
-        # return df
         """
         JSONL 파일을 한 줄씩 읽어서 DataFrame으로 변환.
         - 빈 줄은 건너뜀
         """
         records = []
-        with CATALOG_JSONL_PATH.open("r", encoding="utf-8") as f:
+        with self.catalog_path.open("r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:  # 빈 줄이면 스킵
