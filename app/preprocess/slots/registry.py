@@ -1,4 +1,4 @@
-# nlp/slots/registry.py
+# slots/registry.py
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Set, Tuple
