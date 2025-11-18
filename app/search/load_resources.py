@@ -21,6 +21,15 @@ class ResourceLoader:
         self.catalog_path = Path(catalog_path)
         self.cache_path = self.catalog_path.with_suffix(".pkl")
 
+        self._df: pd.DataFrame | None = None
+
+        # 1) pickle 캐시가 이미 있으면 여기서 한 번만 로드
+        if self.cache_path.exists():
+            print(
+                f"[ResourceLoader] Preloading catalog from pickle cache: {self.cache_path}"
+            )
+            self._df = pd.read_pickle(self.cache_path)
+
     def choose_main_image(self, images: list) -> str | None:
         """
         images 리스트에서 hi_res > large > thumb 순으로 하나 선택.
@@ -98,11 +107,8 @@ class ResourceLoader:
         - 빈 줄은 건너뜀
         """
         # 이미 전처리된 파일을 사용하는 경우
-        if self.cache_path.exists():
-            print(
-                f"[ResourceLoader] Loading catalog from pickle cache: {self.cache_path}"
-            )
-            return pd.read_pickle(self.cache_path)
+        if self._df is not None:
+            return self._df
 
         # 2) 없으면 JSONL 파일에서 로드
         print(f"[ResourceLoader] Building catalog from JSONL: {self.catalog_path}")
@@ -122,4 +128,5 @@ class ResourceLoader:
         print(f"[ResourceLoader] Saving pickle cache to: {self.cache_path}")
         df.to_pickle(self.cache_path)
 
+        self._df = df
         return df
