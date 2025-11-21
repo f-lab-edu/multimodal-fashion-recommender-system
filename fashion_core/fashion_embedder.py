@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from PIL import Image
@@ -15,6 +15,26 @@ from tqdm import tqdm
 import torch
 from transformers import CLIPModel, CLIPProcessor
 import faiss
+
+
+def _get_asin(item: Dict[str, Any]) -> Optional[str]:
+    """item에서 공통적으로 쓰는 asin/id 추출."""
+    return item.get("parent_asin") or item.get("asin") or item.get("id")
+
+
+def _find_image_path_str(image_root: Path, asin: Optional[str]) -> Optional[str]:
+    """asin 기준으로 jpg/png 파일 중 존재하는 경로를 찾아 문자열로 반환."""
+    if not asin:
+        return None
+
+    jpg_path = image_root / f"{asin}.jpg"
+    png_path = image_root / f"{asin}.png"
+
+    if jpg_path.exists():
+        return str(jpg_path)
+    if png_path.exists():
+        return str(png_path)
+    return None
 
 
 class FashionEmbeddingBuilder:
@@ -134,45 +154,74 @@ class FashionEmbeddingBuilder:
         norms = np.linalg.norm(x, axis=1, keepdims=True) + 1e-10
         return x / norms
 
-    def encode_texts(self, texts: List[str]) -> np.ndarray:
-        embs = []
-        for i in tqdm(
-            range(0, len(texts), self.text_batch_size), desc="Encoding texts"
-        ):
-            batch = texts[i : i + self.text_batch_size]
-            inputs = self.processor(
-                text=batch,
-                images=None,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=77,
-            ).to(self.device)
-            with torch.no_grad():
-                out = self.model.get_text_features(**inputs)
-            embs.append(out.cpu().numpy())
-        embs = np.concatenate(embs, axis=0)
-        embs = self._normalize(embs)
-        return embs
+    def _process_text_batch_inner(
+        self, items: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Optional[np.ndarray]]:
+        metas: List[Dict[str, Any]] = []
+        texts: List[str] = []
 
-    def encode_images(self, images: List[Image.Image]) -> np.ndarray:
-        embs = []
-        for i in tqdm(
-            range(0, len(images), self.image_batch_size), desc="Encoding images"
-        ):
-            batch = images[i : i + self.image_batch_size]
-            inputs = self.processor(
-                text=None,
-                images=batch,
-                return_tensors="pt",
-                padding=True,
-            ).to(self.device)
-            with torch.no_grad():
-                out = self.model.get_image_features(**inputs)
-            embs.append(out.cpu().numpy())
-        embs = np.concatenate(embs, axis=0)
-        embs = self._normalize(embs)
-        return embs
+        for item in items:
+            text = self.build_text_for_embedding(item)
+            if not text.strip():
+                continue
+
+            asin = _get_asin(item)
+            img_path_str = _find_image_path_str(self.image_root, asin)
+
+            meta = {
+                "asin": asin,
+                "text": text,
+                "image_path": img_path_str,
+            }
+            texts.append(text)
+            metas.append(meta)
+
+        if not texts:
+            return metas, None
+
+        embs = self.encode_texts(texts).astype("float32")
+        return metas, embs
+
+    def _process_image_batch_inner(
+        self, items: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], Optional[np.ndarray]]:
+        image_paths: List[Path] = []
+        metas_tmp: List[Dict[str, Any]] = []
+
+        for item in items:
+            img_path = self.resolve_image_path(item)
+            if img_path is None:
+                continue
+
+            asin = _get_asin(item)
+            meta = {
+                "asin": asin,
+                "text": None,
+                "image_path": str(img_path),
+            }
+            image_paths.append(img_path)
+            metas_tmp.append(meta)
+
+        if not image_paths:
+            return [], None
+
+        # 실제 열리는 이미지만 사용
+        pil_images: List[Image.Image] = []
+        metas: List[Dict[str, Any]] = []
+
+        for img_path, meta in zip(image_paths, metas_tmp):
+            try:
+                img = Image.open(img_path).convert("RGB")
+            except Exception:
+                continue
+            pil_images.append(img)
+            metas.append(meta)
+
+        if not pil_images:
+            return [], None
+
+        embs = self.encode_images(pil_images).astype("float32")
+        return metas, embs
 
     def _process_batch(self, items: List[Dict[str, Any]]) -> None:
         """
@@ -182,76 +231,13 @@ class FashionEmbeddingBuilder:
         - FAISS 인덱스에 add
         - metadata에 메타데이터 추가
         """
-        metas: List[Dict[str, Any]] = []
-
         if self.embedding_mode == "text":
-            # 텍스트 전용 인덱스
-            texts: List[str] = []
-            for item in items:
-                text = self.build_text_for_embedding(item)
-                if not text.strip():
-                    continue
-                asin = item.get("parent_asin") or item.get("asin") or item.get("id")
-                img_path_str: Optional[str] = None
-                if asin:
-                    jpg_path = self.image_root / f"{asin}.jpg"
-                    png_path = self.image_root / f"{asin}.png"
-                    if jpg_path.exists():
-                        img_path_str = str(jpg_path)
-                    elif png_path.exists():
-                        img_path_str = str(png_path)
-
-                meta = {
-                    "asin": item.get("parent_asin")
-                    or item.get("asin")
-                    or item.get("id"),
-                    "text": text,
-                    "image_path": img_path_str,
-                }
-                texts.append(text)
-                metas.append(meta)
-
-            if not texts:
-                return
-
-            embs = self.encode_texts(texts).astype("float32")
+            metas, embs = self._process_text_batch_inner(items)
         else:
-            # 이미지 전용 인덱스
-            image_paths: List[Path] = []
-            metas_tmp: List[Dict[str, Any]] = []
+            metas, embs = self._process_image_batch_inner(items)
 
-            for item in items:
-                img_path = self.resolve_image_path(item)
-                if img_path is None:
-                    continue
-                meta = {
-                    "asin": item.get("parent_asin")
-                    or item.get("asin")
-                    or item.get("id"),
-                    "text": None,
-                    "image_path": str(img_path),
-                }
-                image_paths.append(img_path)
-                metas_tmp.append(meta)
-
-            if not image_paths:
-                return
-
-            # 실제 열리는 이미지만 사용
-            pil_images: List[Image.Image] = []
-            metas = []
-            for img_path, meta in zip(image_paths, metas_tmp):
-                try:
-                    img = Image.open(img_path).convert("RGB")
-                except Exception:
-                    continue
-                pil_images.append(img)
-                metas.append(meta)
-
-            if not pil_images:
-                return
-
-            embs = self.encode_images(pil_images).astype("float32")
+        if embs is None or len(embs) == 0:
+            return
 
         if self.index is None:
             dim = embs.shape[1]
@@ -284,7 +270,9 @@ class FashionEmbeddingBuilder:
         with self.jsonl_path.open("r", encoding="utf-8") as f:
             batch_items: List[Dict[str, Any]] = []
 
-            for line_idx, line in enumerate(f):
+            for line_idx, line in enumerate(
+                tqdm(f, desc=f"[build_index] reading {self.jsonl_path.name}")
+            ):
                 if num_shards is not None and shard_id is not None:
                     if line_idx % num_shards != shard_id:
                         continue
