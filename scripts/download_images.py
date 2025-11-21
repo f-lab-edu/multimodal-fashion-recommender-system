@@ -3,7 +3,7 @@
 
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import requests
 from tqdm import tqdm
@@ -24,32 +24,49 @@ SESSION.headers.update(
 )
 
 
+def _score_image(img: dict) -> Tuple[int, Optional[str]]:
+    """
+    한 이미지에 대해 우선순위와 선택할 URL을 계산한다.
+    점수가 높을수록 더 좋은 품질/우선순위.
+    """
+    is_main = img.get("variant") == "MAIN"
+
+    # 1순위: MAIN + hi_res
+    if is_main and img.get("hi_res"):
+        return 4, img["hi_res"]
+
+    # 2순위: MAIN + large
+    if is_main and img.get("large"):
+        return 3, img["large"]
+
+    # 3순위: 아무거나 hi_res
+    if img.get("hi_res"):
+        return 2, img["hi_res"]
+
+    # 4순위: 아무거나 large
+    if img.get("large"):
+        return 1, img["large"]
+
+    # 후보 없음
+    return 0, None
+
+
 def pick_best_image_url(item: dict) -> Optional[str]:
     images = item.get("images") or []
     if not images:
         return None
 
-    # 1순위: MAIN + hi_res
-    for img in images:
-        if img.get("variant") == "MAIN" and img.get("hi_res"):
-            return img["hi_res"]
+    best_score = 0
+    best_url: Optional[str] = None
 
-    # 2순위: MAIN + large
     for img in images:
-        if img.get("variant") == "MAIN" and img.get("large"):
-            return img["large"]
+        score, url = _score_image(img)
+        # 동일 점수면 먼저 나온 이미지를 유지하기 위해 '>'만 사용
+        if url is not None and score > best_score:
+            best_score = score
+            best_url = url
 
-    # 3순위: 아무거나 hi_res
-    for img in images:
-        if img.get("hi_res"):
-            return img["hi_res"]
-
-    # 4순위: 아무거나 large
-    for img in images:
-        if img.get("large"):
-            return img["large"]
-
-    return None
+    return best_url
 
 
 def download_one_image(asin: str, url: str, dest: Path) -> bool:
