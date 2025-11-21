@@ -16,6 +16,8 @@ import faiss
 
 from googletrans import Translator
 
+FASHION_CLIP_MODEL_NAME = "patrickjohncyh/fashion-clip"
+
 
 class ShardedFashionSearchEngine:
     """
@@ -28,7 +30,7 @@ class ShardedFashionSearchEngine:
     def __init__(
         self,
         shard_specs: List[tuple[Path, Path]],  # (index_path, meta_path) 리스트
-        model_name: str = "patrickjohncyh/fashion-clip",
+        model_name: str = FASHION_CLIP_MODEL_NAME,
         device: Optional[str] = None,
     ):
         self.shard_specs = shard_specs
@@ -89,7 +91,7 @@ class ShardedFashionSearchEngine:
     def from_prefix(
         cls,
         base_prefix: Path,
-        model_name: str = "patrickjohncyh/fashion-clip",
+        model_name: str = FASHION_CLIP_MODEL_NAME,
         device: Optional[str] = None,
     ) -> "ShardedFashionSearchEngine":
         """
@@ -280,7 +282,7 @@ class FusionSearchEngine:
         cls,
         text_base_prefix: Path,
         image_base_prefix: Path,
-        model_name: str = "patrickjohncyh/fashion-clip",
+        model_name: str = FASHION_CLIP_MODEL_NAME,
         device: Optional[str] = None,
         rrf_k: int = 60,
         w_text: float = 1.0,
