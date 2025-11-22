@@ -1,5 +1,6 @@
 # scripts/download_images.py
 # meta_with_garment_label.jsonl을 읽어 Fashion 이미지들을 로컬에 캐시
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import json
 from pathlib import Path
@@ -75,7 +76,7 @@ def download_one_image(asin: str, url: str, dest: Path) -> bool:
         return False
 
     try:
-        resp = SESSION.get(url, timeout=10)
+        resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         dest.write_bytes(resp.content)
         return True
@@ -119,14 +120,14 @@ def main():
     print(f"[download_images] saving images under {image_root}")
 
     seen_keys = set()
-    downloaded = 0
+    jobs: list[tuple[str, str]] = []
     skipped_no_url = 0
 
+    # 1단계: 다운로드 대상(job) 수집
     with input_jsonl.open("r", encoding="utf-8") as f:
-        for line in tqdm(f, total=total_lines):
+        for line in tqdm(f, total=total_lines, desc="Scanning JSONL"):
             item = json.loads(line)
 
-            # parent_asin이 있으면 그걸 우선, 없으면 asin/id 사용
             key = item.get("parent_asin") or item.get("asin") or item.get("id")
             if not key:
                 continue
@@ -140,10 +141,30 @@ def main():
                 skipped_no_url += 1
                 continue
 
-            dest = image_root / f"{key}.jpg"
-            ok = download_one_image(key, url, dest)
-            if ok:
-                downloaded += 1
+            jobs.append((key, url))
+
+    print(f"[download_images] total jobs={len(jobs)}, skipped_no_url={skipped_no_url}")
+
+    # 2단계: 병렬 다운로드
+    downloaded = 0
+
+    def _job_wrapper(job: tuple[str, str]) -> bool:
+        key, url = job
+        dest = image_root / f"{key}.jpg"
+        return download_one_image(key, url, dest)
+
+    max_workers = 16
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(_job_wrapper, job) for job in jobs]
+
+        for fut in tqdm(as_completed(futures), total=len(futures), desc="Downloading"):
+            try:
+                if fut.result():
+                    downloaded += 1
+            except Exception as e:
+                # 혹시라도 download_one_image에서 처리 안 된 예외가 튀어나오면
+                print(f"[WARN] unexpected error in worker: {e}")
 
     print(
         f"[download_images] downloaded={downloaded}, "

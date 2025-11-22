@@ -106,7 +106,7 @@ class FashionEmbeddingBuilder:
         JSONL 아이템에서 텍스트 필드들을 조합해서
         임베딩에 쓸 문자열 생성
         """
-        fields = ["title", "store", "description", "features"]
+        fields = ["features", "store", "title", "description"]
         parts = []
 
         for field in fields:
