@@ -109,8 +109,10 @@ class BM25TextSearchEngine:
         if len(scores) == 0:
             return []
 
-        top_k = min(top_k, len(scores))
-        top_idx = np.argpartition(scores, -top_k)[-top_k:]
+        requested_top_k = top_k  # 최종적으로 돌려줄 개수
+        raw_top_k = min(requested_top_k * 3, len(scores))  # 넉넉하게 뽑기
+
+        top_idx = np.argpartition(scores, -raw_top_k)[-raw_top_k:]
         top_idx = top_idx[np.argsort(scores[top_idx])[::-1]]
 
         # item_ids 매핑
@@ -133,7 +135,23 @@ class BM25TextSearchEngine:
             )
             hits.append(hit)
 
-        return hits
+        deduped: List[SearchHit] = []
+        seen_asin: set[str] = set()
+
+        for h in hits:
+            key = h.asin or f"ITEM-{h.item_id}"
+            if key in seen_asin:
+                continue
+            seen_asin.add(key)
+            deduped.append(h)
+            if len(deduped) >= top_k:
+                break
+
+        # deduped 안에서 rank 재부여 (1부터)
+        for i, h in enumerate(deduped, start=1):
+            h.rank = i
+
+        return deduped
 
     def close(self):
         if getattr(self, "conn", None) is not None:
@@ -249,7 +267,8 @@ class DbImageSearchEngine:
     def search(self, query: str, top_k: int = 10) -> List[SearchHit]:
         q_emb = self._encode_text_query(query)  # (1, d)
 
-        scores, ids = self.index.search(q_emb, top_k)
+        raw_top_k = min(top_k * 3, self.index.ntotal)
+        scores, ids = self.index.search(q_emb, raw_top_k)
         scores = scores[0]
         ids = ids[0]
 
@@ -262,20 +281,38 @@ class DbImageSearchEngine:
         meta_map = self._load_item_meta_for_ids(item_ids)
 
         hits: List[SearchHit] = []
-        for rank, (item_id, score) in enumerate(valid, start=1):
+        for rank_raw, (item_id, score) in enumerate(valid, start=1):
             meta = meta_map.get(item_id, {})
-            hit = SearchHit(
-                item_id=item_id,
-                asin=meta.get("asin"),
-                score=score,
-                rank=rank,
-                title=meta.get("title"),
-                store=meta.get("store"),
-                image_url=meta.get("image_url"),
+            hits.append(
+                SearchHit(
+                    item_id=item_id,
+                    asin=meta.get("asin"),
+                    score=score,
+                    rank=rank_raw,  # raw rank
+                    title=meta.get("title"),
+                    store=meta.get("store"),
+                    image_url=meta.get("image_url"),
+                )
             )
-            hits.append(hit)
 
-        return hits
+        # ---------- asin 기준 dedup ----------
+        deduped: List[SearchHit] = []
+        seen_asin: set[str] = set()
+
+        for h in hits:
+            key = h.asin or f"ITEM-{h.item_id}"
+            if key in seen_asin:
+                continue
+            seen_asin.add(key)
+            deduped.append(h)
+            if len(deduped) >= top_k:
+                break
+
+        # deduped 안에서 rank 재부여
+        for i, h in enumerate(deduped, start=1):
+            h.rank = i
+
+        return deduped
 
     def close(self):
         if getattr(self, "conn", None) is not None:
@@ -329,26 +366,19 @@ class BM25ClipFusionEngine:
         top_k: int = 10,
         stage1_factor: int = 3,
     ) -> List[FusionHit]:
-        """
-        1) BM25에서 top_k * stage1_factor 만큼 검색
-        2) 이미지에서 top_k * stage1_factor 만큼 검색
-        3) asin 기준으로 RRF 점수 합산 후 글로벌 top_k 반환
-        """
         stage1_k = max(top_k, top_k * stage1_factor)
 
         print(f"[Fusion] query={query!r}, stage1_k={stage1_k}, final_top_k={top_k}")
 
-        # 1) 텍스트(BM25) 검색
         bm25_hits = self.text_engine.search(query=query, top_k=stage1_k)
         print(f"[Fusion] BM25 hits(stage1) = {len(bm25_hits)}")
 
-        # 2) 이미지 검색
         image_hits = self.image_engine.search(query=query, top_k=stage1_k)
         print(f"[Fusion] Image hits(stage1) = {len(image_hits)}")
 
         fused: Dict[str, FusionHit] = {}
 
-        # ---------- BM25 반영 ----------
+        # ----- BM25 반영 -----
         for h in bm25_hits:
             asin = h.asin or f"ITEM-{h.item_id}"
             if asin not in fused:
@@ -358,18 +388,22 @@ class BM25ClipFusionEngine:
                     title=h.title,
                     store=h.store,
                     image_url=h.image_url,
-                    bm25_rank=None,
-                    bm25_score_raw=None,
+                    bm25_rank=h.rank,
+                    bm25_score_raw=h.score,
                     image_rank=None,
                     image_score_raw=None,
                     rrf_score=0.0,
                 )
+            else:
+                if fused[asin].bm25_rank is None or h.rank < fused[asin].bm25_rank:
+                    fused[asin].bm25_rank = h.rank
+                    fused[asin].bm25_score_raw = h.score
 
-            fused[asin].bm25_rank = h.rank
-            fused[asin].bm25_score_raw = h.score
-            fused[asin].rrf_score += self.w_text * self._rrf(h.rank, self.rrf_k)
+            fused[asin].rrf_score += self.w_text * self._rrf(
+                fused[asin].bm25_rank, self.rrf_k
+            )
 
-        # ---------- 이미지 반영 ----------
+        # ----- 이미지 반영 -----
         for h in image_hits:
             asin = h.asin or f"ITEM-{h.item_id}"
             if asin not in fused:
@@ -381,12 +415,11 @@ class BM25ClipFusionEngine:
                     image_url=h.image_url,
                     bm25_rank=None,
                     bm25_score_raw=None,
-                    image_rank=None,
-                    image_score_raw=None,
+                    image_rank=h.rank,
+                    image_score_raw=h.score,
                     rrf_score=0.0,
                 )
             else:
-                # 이미 BM25에서 들어온 asin인데, 이미지 쪽 메타가 더 풍부하면 덮어쓸 수도 있음
                 if h.title:
                     fused[asin].title = h.title
                 if h.store:
@@ -396,11 +429,15 @@ class BM25ClipFusionEngine:
                 if fused[asin].db_item_id is None:
                     fused[asin].db_item_id = h.item_id
 
-            fused[asin].image_rank = h.rank
-            fused[asin].image_score_raw = h.score
-            fused[asin].rrf_score += self.w_image * self._rrf(h.rank, self.rrf_k)
+                if fused[asin].image_rank is None or h.rank < fused[asin].image_rank:
+                    fused[asin].image_rank = h.rank
+                    fused[asin].image_score_raw = h.score
 
-        # ---------- 정렬 & 최종 top-k ----------
+            if fused[asin].image_rank is not None:
+                fused[asin].rrf_score += self.w_image * self._rrf(
+                    fused[asin].image_rank, self.rrf_k
+                )
+
         results = list(fused.values())
         results.sort(key=lambda x: x.rrf_score, reverse=True)
 
