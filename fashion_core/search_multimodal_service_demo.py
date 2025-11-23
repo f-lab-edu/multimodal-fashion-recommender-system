@@ -1,4 +1,13 @@
 # scripts/search_multimodal_service_demo.py
+
+"""
+python -m fashion_core.search_multimodal_service_demo  \
+      --db-path data/fashion_items.db   \
+        --bm25-path data/bm25_from_item_docs.pkl \
+            --image-index-path data/image_index_with_ids.faiss   \
+                --query "black shirts"   --top-k 10
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -21,7 +30,7 @@ def parse_args():
         "--bm25-path",
         type=Path,
         required=True,
-        help="BM25 pickle 경로 (예: data/bm25_from_item_docs_50k.pkl)",
+        help="BM25 pickle 경로 (예: data/bm25_from_item_docs.pkl)",
     )
     p.add_argument(
         "--image-index-path",

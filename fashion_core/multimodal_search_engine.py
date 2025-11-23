@@ -144,7 +144,7 @@ class BM25TextSearchEngine:
                 continue
             seen_asin.add(key)
             deduped.append(h)
-            if len(deduped) >= top_k:
+            if len(deduped) >= requested_top_k:
                 break
 
         # deduped 안에서 rank 재부여 (1부터)
