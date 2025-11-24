@@ -34,6 +34,102 @@ class BM25ClipFusionEngine:
     def _rrf(rank: int, k: int) -> float:
         return 1.0 / (k + rank)
 
+    @staticmethod
+    def _asin_key(hit) -> str:
+        """SearchHit에서 asin 키를 생성 (asin 없으면 ITEM-id 사용)."""
+        return hit.asin or f"ITEM-{hit.item_id}"
+
+    def _apply_bm25_hits(
+        self,
+        fused: Dict[str, FusionHit],
+        bm25_hits,
+    ) -> None:
+        """BM25 결과를 fused 딕셔너리에 반영."""
+        for h in bm25_hits:
+            asin = self._asin_key(h)
+            fusion = fused.get(asin)
+
+            if fusion is None:
+                fusion = FusionHit(
+                    asin=asin,
+                    db_item_id=h.item_id,
+                    title=h.title,
+                    store=h.store,
+                    image_url=h.image_url,
+                    bm25_rank=h.rank,
+                    bm25_score_raw=h.score,
+                    image_rank=None,
+                    image_score_raw=None,
+                    rrf_score=0.0,
+                )
+                fused[asin] = fusion
+            else:
+                if fusion.bm25_rank is None or h.rank < fusion.bm25_rank:
+                    fusion.bm25_rank = h.rank
+                    fusion.bm25_score_raw = h.score
+
+            # bm25_rank는 위에서 반드시 설정됨
+            fusion.rrf_score += self.w_text * self._rrf(fusion.bm25_rank, self.rrf_k)
+
+    def _apply_image_hits(
+        self,
+        fused: Dict[str, FusionHit],
+        image_hits,
+    ) -> None:
+        """이미지(FAISS) 결과를 fused 딕셔너리에 반영."""
+        for h in image_hits:
+            asin = self._asin_key(h)
+            fusion = fused.get(asin)
+
+            if fusion is None:
+                fusion = FusionHit(
+                    asin=asin,
+                    db_item_id=h.item_id,
+                    title=h.title,
+                    store=h.store,
+                    image_url=h.image_url,
+                    bm25_rank=None,
+                    bm25_score_raw=None,
+                    image_rank=h.rank,
+                    image_score_raw=h.score,
+                    rrf_score=0.0,
+                )
+                fused[asin] = fusion
+            else:
+                # 메타데이터 보강
+                if h.title:
+                    fusion.title = h.title
+                if h.store:
+                    fusion.store = h.store
+                if h.image_url:
+                    fusion.image_url = h.image_url
+                if fusion.db_item_id is None:
+                    fusion.db_item_id = h.item_id
+
+                # 더 좋은 이미지 랭크로 갱신
+                if fusion.image_rank is None or h.rank < fusion.image_rank:
+                    fusion.image_rank = h.rank
+                    fusion.image_score_raw = h.score
+
+            if fusion.image_rank is not None:
+                fusion.rrf_score += self.w_image * self._rrf(
+                    fusion.image_rank, self.rrf_k
+                )
+
+    @staticmethod
+    def _finalize_results(
+        fused: Dict[str, FusionHit],
+        top_k: int,
+    ) -> List[FusionHit]:
+        """RRF 스코어 기준 정렬 + 최종 rank 부여."""
+        results = list(fused.values())
+        results.sort(key=lambda x: x.rrf_score, reverse=True)
+
+        final = results[:top_k]
+        for i, r in enumerate(final, start=1):
+            r.rank = i
+        return final
+
     def search(
         self,
         query: str,
@@ -52,71 +148,7 @@ class BM25ClipFusionEngine:
 
         fused: Dict[str, FusionHit] = {}
 
-        # ----- BM25 반영 -----
-        for h in bm25_hits:
-            asin = h.asin or f"ITEM-{h.item_id}"
-            if asin not in fused:
-                fused[asin] = FusionHit(
-                    asin=asin,
-                    db_item_id=h.item_id,
-                    title=h.title,
-                    store=h.store,
-                    image_url=h.image_url,
-                    bm25_rank=h.rank,
-                    bm25_score_raw=h.score,
-                    image_rank=None,
-                    image_score_raw=None,
-                    rrf_score=0.0,
-                )
-            else:
-                if fused[asin].bm25_rank is None or h.rank < fused[asin].bm25_rank:
-                    fused[asin].bm25_rank = h.rank
-                    fused[asin].bm25_score_raw = h.score
+        self._apply_bm25_hits(fused, bm25_hits)
+        self._apply_image_hits(fused, image_hits)
 
-            fused[asin].rrf_score += self.w_text * self._rrf(
-                fused[asin].bm25_rank, self.rrf_k
-            )
-
-        # ----- 이미지 반영 -----
-        for h in image_hits:
-            asin = h.asin or f"ITEM-{h.item_id}"
-            if asin not in fused:
-                fused[asin] = FusionHit(
-                    asin=asin,
-                    db_item_id=h.item_id,
-                    title=h.title,
-                    store=h.store,
-                    image_url=h.image_url,
-                    bm25_rank=None,
-                    bm25_score_raw=None,
-                    image_rank=h.rank,
-                    image_score_raw=h.score,
-                    rrf_score=0.0,
-                )
-            else:
-                if h.title:
-                    fused[asin].title = h.title
-                if h.store:
-                    fused[asin].store = h.store
-                if h.image_url:
-                    fused[asin].image_url = h.image_url
-                if fused[asin].db_item_id is None:
-                    fused[asin].db_item_id = h.item_id
-
-                if fused[asin].image_rank is None or h.rank < fused[asin].image_rank:
-                    fused[asin].image_rank = h.rank
-                    fused[asin].image_score_raw = h.score
-
-            if fused[asin].image_rank is not None:
-                fused[asin].rrf_score += self.w_image * self._rrf(
-                    fused[asin].image_rank, self.rrf_k
-                )
-
-        results = list(fused.values())
-        results.sort(key=lambda x: x.rrf_score, reverse=True)
-
-        final = results[:top_k]
-        for i, r in enumerate(final, start=1):
-            r.rank = i
-
-        return final
+        return self._finalize_results(fused, top_k)

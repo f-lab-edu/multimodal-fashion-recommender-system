@@ -117,8 +117,8 @@ def main():
         print(f"  title      : {title}")
         print(f"  store      : {r['store'] or ''}")
         print(f"  image_url  : {r['image_url'] or ''}")
-        print(f"  bm25_rank  : {r['bm25_rank']}  " f"bm25_score={r['bm25_score']}")
-        print(f"  image_rank : {r['image_rank']}  " f"image_score={r['image_score']}")
+        print(f"  bm25_rank  : {r['bm25_rank']}  ", f"bm25_score={r['bm25_score']}")
+        print(f"  image_rank : {r['image_rank']}  ", f"image_score={r['image_score']}")
         print(f"  rrf_score  : {r['rrf_score']:.6f}")
         print("-" * 80)
 

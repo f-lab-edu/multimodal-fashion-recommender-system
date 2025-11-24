@@ -8,15 +8,18 @@ from nltk.corpus import stopwords
 
 NLTK_STOPWORDS = set(stopwords.words("english"))
 
+# 공통 치환 문자열 상수
+TSHIRT_CANONICAL = " tshirt "
+
 # 1) 문장 전체에서 우선 치환할 패턴들 (phrase level)
 PHRASE_NORMALIZATION = [
     # --- T-shirt 계열 ---
     # t-shirt, T shirt, T-shirts, t shirts ...
-    (re.compile(r"\bt[-\s]*shirt(s)?\b", re.IGNORECASE), " tshirt "),
+    (re.compile(r"\bt[-\s]*shirt(s)?\b", re.IGNORECASE), " TSHIRT_CANONICAL "),
     # tee shirt(s)
-    (re.compile(r"\btee\s+shirt(s)?\b", re.IGNORECASE), " tshirt "),
+    (re.compile(r"\btee\s+shirt(s)?\b", re.IGNORECASE), " TSHIRT_CANONICAL "),
     # tees → tshirt
-    (re.compile(r"\btees\b", re.IGNORECASE), " tshirt "),
+    (re.compile(r"\btees\b", re.IGNORECASE), " tsTSHIRT_CANONICALirt "),
     # --- Sweatshirt 계열 ---
     # sweat shirt(s), sweatshirt(s)
     (re.compile(r"\bsweat\s*shirt(s)?\b", re.IGNORECASE), " sweatshirt "),
