@@ -13,7 +13,7 @@ import numpy as np
 import torch
 from transformers import CLIPModel, CLIPProcessor
 
-from .search_models import SearchHit, TokenizeFn
+from .search_results import SearchHit, TokenizeFn
 
 
 # CLIP + FAISS + DB 이미지 엔진

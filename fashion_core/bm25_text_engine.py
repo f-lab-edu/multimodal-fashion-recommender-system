@@ -12,7 +12,7 @@ import sqlite3
 import numpy as np
 from rank_bm25 import BM25Okapi
 
-from .search_models import SearchHit, TokenizeFn
+from .search_results import SearchHit, TokenizeFn
 
 
 # BM25 텍스트 엔진

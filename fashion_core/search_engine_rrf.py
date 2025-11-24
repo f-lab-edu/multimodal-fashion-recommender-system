@@ -7,7 +7,7 @@ from typing import Dict, List
 
 from .bm25_text_engine import BM25TextSearchEngine
 from .db_image_engine import DbImageSearchEngine
-from .search_models import FusionHit
+from .search_results import FusionHit
 
 
 class BM25ClipFusionEngine:
