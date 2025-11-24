@@ -71,6 +71,56 @@ class BM25ClipFusionEngine:
             # bm25_rank는 위에서 반드시 설정됨
             fusion.rrf_score += self.w_text * self._rrf(fusion.bm25_rank, self.rrf_k)
 
+    def _get_or_create_fusion_for_image_hit(
+        self,
+        fused: Dict[str, FusionHit],
+        asin: str,
+        hit,  # 타입 엄밀히 하려면: hit: SearchHit
+    ) -> FusionHit:
+        fusion = fused.get(asin)
+        if fusion is not None:
+            return fusion
+
+        # 새로 생성
+        fusion = FusionHit(
+            asin=asin,
+            db_item_id=hit.item_id,
+            title=hit.title,
+            store=hit.store,
+            image_url=hit.image_url,
+            bm25_rank=None,
+            bm25_score_raw=None,
+            image_rank=hit.rank,
+            image_score_raw=hit.score,
+            rrf_score=0.0,
+        )
+        fused[asin] = fusion
+        return fusion
+
+    @staticmethod
+    def _update_fusion_image_metadata(fusion: FusionHit, hit) -> None:
+        """이미지 히트 기반으로 타이틀/스토어/이미지URL/아이템ID 보강."""
+        if getattr(hit, "title", None):
+            fusion.title = hit.title
+        if getattr(hit, "store", None):
+            fusion.store = hit.store
+        if getattr(hit, "image_url", None):
+            fusion.image_url = hit.image_url
+        if fusion.db_item_id is None:
+            fusion.db_item_id = hit.item_id
+
+    @staticmethod
+    def _update_image_rank_and_score(fusion: FusionHit, hit) -> None:
+        """더 좋은 이미지 랭크일 경우 image_rank / image_score_raw 갱신."""
+        if fusion.image_rank is None or hit.rank < fusion.image_rank:
+            fusion.image_rank = hit.rank
+            fusion.image_score_raw = hit.score
+
+    def _add_image_rrf_score(self, fusion: FusionHit) -> None:
+        """image_rank가 있을 경우 RRF 스코어 반영."""
+        if fusion.image_rank is not None:
+            fusion.rrf_score += self.w_image * self._rrf(fusion.image_rank, self.rrf_k)
+
     def _apply_image_hits(
         self,
         fused: Dict[str, FusionHit],
@@ -79,42 +129,12 @@ class BM25ClipFusionEngine:
         """이미지(FAISS) 결과를 fused 딕셔너리에 반영."""
         for h in image_hits:
             asin = self._asin_key(h)
-            fusion = fused.get(asin)
+            fusion = self._get_or_create_fusion_for_image_hit(fused, asin, h)
 
-            if fusion is None:
-                fusion = FusionHit(
-                    asin=asin,
-                    db_item_id=h.item_id,
-                    title=h.title,
-                    store=h.store,
-                    image_url=h.image_url,
-                    bm25_rank=None,
-                    bm25_score_raw=None,
-                    image_rank=h.rank,
-                    image_score_raw=h.score,
-                    rrf_score=0.0,
-                )
-                fused[asin] = fusion
-            else:
-                # 메타데이터 보강
-                if h.title:
-                    fusion.title = h.title
-                if h.store:
-                    fusion.store = h.store
-                if h.image_url:
-                    fusion.image_url = h.image_url
-                if fusion.db_item_id is None:
-                    fusion.db_item_id = h.item_id
-
-                # 더 좋은 이미지 랭크로 갱신
-                if fusion.image_rank is None or h.rank < fusion.image_rank:
-                    fusion.image_rank = h.rank
-                    fusion.image_score_raw = h.score
-
-            if fusion.image_rank is not None:
-                fusion.rrf_score += self.w_image * self._rrf(
-                    fusion.image_rank, self.rrf_k
-                )
+            # 기존 fusion이든 새 fusion이든 동일 처리 가능
+            self._update_fusion_image_metadata(fusion, h)
+            self._update_image_rank_and_score(fusion, h)
+            self._add_image_rrf_score(fusion)
 
     @staticmethod
     def _finalize_results(
