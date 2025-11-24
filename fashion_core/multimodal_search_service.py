@@ -7,12 +7,10 @@ from typing import Any, Dict, List, Optional
 
 from scripts.text_normalization import tokenize  # 이미 쓰던 토크나이저
 
-from fashion_core.multimodal_search_engine import (
-    BM25TextSearchEngine,
-    DbImageSearchEngine,
-    BM25ClipFusionEngine,
-    FusionHit,
-)
+from fashion_core.bm25_text_engine import BM25TextSearchEngine
+from fashion_core.db_image_engine import DbImageSearchEngine
+from fashion_core.search_engine_rrf import BM25ClipFusionEngine
+from fashion_core.search_models import FusionHit
 
 
 class FashionSearchService:
