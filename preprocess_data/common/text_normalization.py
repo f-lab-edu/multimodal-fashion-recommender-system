@@ -1,4 +1,6 @@
 # scripts/text_normalization.py
+# 사용자의 쿼리나 아이템 설명 텍스트를 정규화하고 토큰화하는 함수들
+
 from __future__ import annotations
 
 import re
