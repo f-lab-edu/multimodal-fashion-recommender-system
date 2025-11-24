@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import pickle
 import sqlite3
@@ -13,6 +13,8 @@ import numpy as np
 from rank_bm25 import BM25Okapi
 
 from .search_results import SearchHit, TokenizeFn
+from .search_utils import load_item_meta_for_ids
+from .search_utils import deduplicate_hits_by_asin
 
 
 # BM25 텍스트 엔진
@@ -54,38 +56,6 @@ class BM25TextSearchEngine:
         else:
             self.tokenizer = tokenizer
 
-    # 내부: DB에서 items 메타 로드
-    def _load_item_meta_for_ids(self, item_ids: List[int]) -> Dict[int, Dict[str, Any]]:
-        if not item_ids:
-            return {}
-
-        placeholders = ",".join("?" for _ in item_ids)
-        rows = self.conn.execute(
-            f"""
-            SELECT
-                id,
-                parent_asin,
-                title,
-                store,
-                image_main_url
-            FROM items
-            WHERE id IN ({placeholders})
-        """,
-            item_ids,
-        ).fetchall()
-
-        meta_map: Dict[int, Dict[str, Any]] = {}
-        for r in rows:
-            iid = int(r["id"])
-            meta_map[iid] = {
-                "item_id": iid,
-                "asin": r["parent_asin"],
-                "title": r["title"],
-                "store": r["store"],
-                "image_url": r["image_main_url"],
-            }
-        return meta_map
-
     def search(self, query: str, top_k: int = 10) -> List[SearchHit]:
         tokens = self.tokenizer(query)
         print(f"[BM25TextSearchEngine] query tokens = {tokens}")
@@ -102,7 +72,7 @@ class BM25TextSearchEngine:
 
         # item_ids 매핑
         top_item_ids = [int(self.item_ids[i]) for i in top_idx]
-        meta_map = self._load_item_meta_for_ids(top_item_ids)
+        meta_map = load_item_meta_for_ids(self.conn, top_item_ids)
 
         hits: List[SearchHit] = []
         for rank, idx in enumerate(top_idx, start=1):
@@ -120,23 +90,7 @@ class BM25TextSearchEngine:
             )
             hits.append(hit)
 
-        deduped: List[SearchHit] = []
-        seen_asin: set[str] = set()
-
-        for h in hits:
-            key = h.asin or f"ITEM-{h.item_id}"
-            if key in seen_asin:
-                continue
-            seen_asin.add(key)
-            deduped.append(h)
-            if len(deduped) >= requested_top_k:
-                break
-
-        # deduped 안에서 rank 재부여 (1부터)
-        for i, h in enumerate(deduped, start=1):
-            h.rank = i
-
-        return deduped
+        return deduplicate_hits_by_asin(hits, requested_top_k)
 
     def close(self):
         if getattr(self, "conn", None) is not None:

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 import sqlite3
 
@@ -14,6 +14,8 @@ import torch
 from transformers import CLIPModel, CLIPProcessor
 
 from .search_results import SearchHit, TokenizeFn
+from .search_utils import load_item_meta_for_ids
+from .search_utils import deduplicate_hits_by_asin
 
 
 # CLIP + FAISS + DB 이미지 엔진
@@ -91,36 +93,6 @@ class DbImageSearchEngine:
         emb = self._normalize(emb)
         return emb  # shape: (1, d)
 
-    def _load_item_meta_for_ids(self, item_ids: List[int]) -> Dict[int, Dict[str, Any]]:
-        if not item_ids:
-            return {}
-        placeholders = ",".join("?" for _ in item_ids)
-        rows = self.conn.execute(
-            f"""
-            SELECT
-                id,
-                parent_asin,
-                title,
-                store,
-                image_main_url
-            FROM items
-            WHERE id IN ({placeholders})
-            """,
-            item_ids,
-        ).fetchall()
-
-        meta_map: Dict[int, Dict[str, Any]] = {}
-        for r in rows:
-            iid = int(r["id"])
-            meta_map[iid] = {
-                "item_id": iid,
-                "asin": r["parent_asin"],
-                "title": r["title"],
-                "store": r["store"],
-                "image_url": r["image_main_url"],
-            }
-        return meta_map
-
     def search(self, query: str, top_k: int = 10) -> List[SearchHit]:
         q_emb = self._encode_text_query(query)  # (1, d)
 
@@ -135,7 +107,7 @@ class DbImageSearchEngine:
             return []
 
         item_ids = [i for i, _ in valid]
-        meta_map = self._load_item_meta_for_ids(item_ids)
+        meta_map = load_item_meta_for_ids(self.conn, item_ids)
 
         hits: List[SearchHit] = []
         for rank_raw, (item_id, score) in enumerate(valid, start=1):
@@ -152,24 +124,7 @@ class DbImageSearchEngine:
                 )
             )
 
-        # ---------- asin 기준 dedup ----------
-        deduped: List[SearchHit] = []
-        seen_asin: set[str] = set()
-
-        for h in hits:
-            key = h.asin or f"ITEM-{h.item_id}"
-            if key in seen_asin:
-                continue
-            seen_asin.add(key)
-            deduped.append(h)
-            if len(deduped) >= top_k:
-                break
-
-        # deduped 안에서 rank 재부여
-        for i, h in enumerate(deduped, start=1):
-            h.rank = i
-
-        return deduped
+        return deduplicate_hits_by_asin(hits, top_k)
 
     def close(self):
         if getattr(self, "conn", None) is not None:
