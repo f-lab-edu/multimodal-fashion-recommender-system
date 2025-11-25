@@ -14,8 +14,7 @@ import torch
 from transformers import CLIPModel, CLIPProcessor
 
 from .search_results import SearchHit, TokenizeFn
-from .search_utils import load_item_meta_for_ids
-from .search_utils import deduplicate_hits_by_asin
+from .search_utils import load_item_meta_for_ids, deduplicate_hits_by_asin
 
 
 # CLIP + FAISS + DB 이미지 엔진

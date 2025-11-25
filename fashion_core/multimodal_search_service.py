@@ -5,7 +5,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from preprocess_data.common.text_normalization import tokenize  # 이미 쓰던 토크나이저
+from common.text_normalization import tokenize  # 이미 쓰던 토크나이저
 
 from fashion_core.bm25_text_engine import BM25TextSearchEngine
 from fashion_core.db_image_engine import DbImageSearchEngine
