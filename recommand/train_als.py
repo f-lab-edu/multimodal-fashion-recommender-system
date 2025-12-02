@@ -1,6 +1,7 @@
 # recommand/train_als.py
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 import argparse
 
@@ -102,6 +103,10 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
 
     train_path: Path = args.train_jsonl
     val_path: Path | None = args.val_jsonl
