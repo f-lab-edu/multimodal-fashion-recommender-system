@@ -129,7 +129,7 @@ class ALSEvaluator:
         user_row = self.user_items_csr[user_idx]
 
         # implicit.recommend()의 기본 반환은 (item_ids, scores)
-        item_ids, scores = self.model.recommend(
+        item_ids, _ = self.model.recommend(
             user_idx,
             user_row,
             N=k,

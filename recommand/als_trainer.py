@@ -283,9 +283,9 @@ class ALSTrainer:
 
         user_positive_items: Dict[int, Set[int]] = {}
         for user_idx, group in df.groupby("user_idx"):
-            user_positive_items[int(user_idx)] = set(
-                int(item_idx) for item_idx in group["item_idx"].tolist()
-            )
+            user_positive_items[int(user_idx)] = {
+                int(item_idx) for item_idx in group["item_idx"]
+            }
 
         logger.info(
             "[EARLY] val users for early stopping: %s",
@@ -335,7 +335,7 @@ class ALSTrainer:
         patience: int = 3,
     ) -> implicit.als.AlternatingLeastSquares:
         """주어진 item_init을 사용해 커스텀 ALS 학습."""
-        num_users, num_items = r_ui_csr.shape
+        num_users, _ = r_ui_csr.shape
         k = self.factors
 
         logger.info(
