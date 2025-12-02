@@ -17,7 +17,7 @@ def load_item_text_embeddings(npz_path: Path) -> Tuple[Dict]:
     item_ids = data["item_ids"].tolist()
     embs = data["embeddings"].astype("float32")
 
-    id2emb: Dict[str, np.ndarray] = {iid: emb for iid, emb in zip(item_ids, embs)}
+    id2emb: Dict[str, np.ndarray] = dict(zip(item_ids, embs))
     dim = embs.shape[1]
     print(f"[EMB] loaded {len(id2emb):,} item text embeddings, dim={dim}")
     return id2emb, dim
