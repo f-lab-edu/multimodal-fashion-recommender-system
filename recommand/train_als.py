@@ -16,7 +16,11 @@ python -m recommand.train_als \
     --image-index-path data/image_index_with_ids.faiss \
     --db-path data/fashion_items.db \
     --eval-k 200 \
-    --patience 3
+    --patience 3 \
+    --factors 128 \
+    --regularization 0.005 \
+    --iterations 30 \
+    --alpha 50.0
 """
 
 
@@ -66,6 +70,33 @@ def parse_args() -> argparse.Namespace:
         default=3,
         help="HitRate@K가 개선되지 않을 때 허용할 epoch 수 (기본: 3)",
     )
+
+    # === 하이퍼파라미터 외부에서 받기 ===
+    p.add_argument(
+        "--factors",
+        type=int,
+        default=64,
+        help="ALS 잠재 차원 수 (기본: 64)",
+    )
+    p.add_argument(
+        "--regularization",
+        type=float,
+        default=1e-2,
+        help="ALS 정규화 계수 λ (기본: 1e-2)",
+    )
+    p.add_argument(
+        "--iterations",
+        type=int,
+        default=20,
+        help="ALS 반복(epoch) 횟수 (기본: 20)",
+    )
+    p.add_argument(
+        "--alpha",
+        type=float,
+        default=40.0,
+        help="implicit ALS confidence 가중치 α (기본: 40.0)",
+    )
+
     return p.parse_args()
 
 
@@ -79,12 +110,12 @@ def main():
     db_path: Path | None = args.db_path
 
     trainer = ALSTrainer(
-        factors=64,
-        regularization=1e-2,
-        iterations=20,
-        alpha=40.0,
-        use_gpu=False,
-        random_state=42,
+        factors=args.factors,
+        regularization=args.regularization,
+        iterations=args.iterations,
+        alpha=args.alpha,
+        use_gpu=False,  # 고정
+        random_state=42,  # 고정
     )
 
     trainer.train_and_save(
