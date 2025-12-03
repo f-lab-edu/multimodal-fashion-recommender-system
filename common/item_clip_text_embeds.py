@@ -5,7 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Tuple
 
+import logging
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def load_item_text_embeddings(npz_path: Path) -> Tuple[Dict]:
@@ -19,5 +22,5 @@ def load_item_text_embeddings(npz_path: Path) -> Tuple[Dict]:
 
     id2emb: Dict[str, np.ndarray] = dict(zip(item_ids, embs))
     dim = embs.shape[1]
-    print(f"[EMB] loaded {len(id2emb):,} item text embeddings, dim={dim}")
+    logger.info("[EMB] loaded %s item text embeddings, dim=%d", f"{len(id2emb):,}", dim)
     return id2emb, dim

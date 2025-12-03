@@ -6,6 +6,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Set
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def load_valid_parent_asins(meta_path: Path) -> Set[str]:
@@ -24,7 +27,7 @@ def load_valid_parent_asins(meta_path: Path) -> Set[str]:
             if parent_asin:
                 valid.add(parent_asin)
 
-    print(f"[meta] 유효한 PARENT_ASIN 수: {len(valid):,}")
+    logger.info("[meta] 유효한 PARENT_ASIN 수: %s", f"{len(valid):,}")
     return valid
 
 
@@ -67,15 +70,21 @@ def filter_reviews_by_meta(
             fout.write(json.dumps(obj, ensure_ascii=False) + "\n")
             kept += 1
 
-    print("=== 리뷰 필터링 결과 ===")
-    print(f"- 전체 리뷰 수           : {total:,}")
-    print(f"- meta에 있는 아이템 리뷰: {kept:,}")
-    print(f"- parent_asin 없는 행    : {skipped_no_parent:,}")
-    print(f"- meta에 없는 아이템 리뷰: {skipped_not_in_meta:,}")
-    print(f"- 최종 남은 비율         : {kept/total*100:.2f}%")
+    logger.info("=== 리뷰 필터링 결과 ===")
+    logger.info("- 전체 리뷰 수           : %s", f"{total:,}")
+    logger.info("- meta에 있는 아이템 리뷰: %s", f"{kept:,}")
+    logger.info("- parent_asin 없는 행    : %s", f"{skipped_no_parent:,}")
+    logger.info("- meta에 없는 아이템 리뷰: %s", f"{skipped_not_in_meta:,}")
+    logger.info("- 최종 남은 비율         : %.2f%%", kept / total * 100)
 
 
 def main():
+    # 필요하다면 여기서 로깅 설정 한번만 해두면 됨
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     meta_path = Path("data/meta_Amazon_Fashion_v1.jsonl")
     reviews_path = Path("data/Amazon_Fashion.jsonl")
     output_path = Path("data/Amazon_Fashion_v1.jsonl")

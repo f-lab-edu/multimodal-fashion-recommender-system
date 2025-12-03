@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import argparse
+import logging
 
 from recommand.als_evaluator import ALSEvaluator
 
@@ -24,6 +25,8 @@ python -m recommand.eval_als \
   --model-dir   models/als_v2_es \
   --k 10
 """
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,16 +61,21 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     args = parse_args()
 
     if not args.model_dir.exists():
         raise FileNotFoundError(f"모델 디렉토리를 찾을 수 없습니다: {args.model_dir}")
 
-    print("[EVAL] 설정")
-    print(f"- train_jsonl: {args.train_jsonl}")
-    print(f"- test_jsonl : {args.test_jsonl}")
-    print(f"- model_dir  : {args.model_dir}")
-    print(f"- K          : {args.k}")
+    logger.info("[EVAL] 설정")
+    logger.info("- train_jsonl: %s", args.train_jsonl)
+    logger.info("- test_jsonl : %s", args.test_jsonl)
+    logger.info("- model_dir  : %s", args.model_dir)
+    logger.info("- K          : %d", args.k)
 
     evaluator = ALSEvaluator(model_dir=args.model_dir)
 
@@ -77,11 +85,11 @@ def main() -> None:
     # 2) test.jsonl로 평가
     metrics = evaluator.evaluate_on_test(args.test_jsonl, k=args.k)
 
-    print("\n=== 최종 평가 결과 ===")
-    print(f"- 평가 유저 수      : {metrics['num_users']:,}")
-    print(f"- Recall@{args.k:>2}       : {metrics['recall_at_k']:.4f}")
-    print(f"- HitRate@{args.k:>2}      : {metrics['hit_rate']:.4f}")
-    print(f"- MAP@{args.k:>2}          : {metrics['map_at_k']:.4f}")
+    logger.info("=== 최종 평가 결과 ===")
+    logger.info("- 평가 유저 수      : %s", f"{metrics['num_users']:,}")
+    logger.info("- Recall@%2d       : %.4f", args.k, metrics["recall_at_k"])
+    logger.info("- HitRate@%2d      : %.4f", args.k, metrics["hit_rate"])
+    logger.info("- MAP@%2d          : %.4f", args.k, metrics["map_at_k"])
 
 
 if __name__ == "__main__":

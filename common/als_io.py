@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import logging
+
 import pandas as pd
 
 pd.set_option("display.float_format", lambda x: f"{x:,.2f}")
+
+logger = logging.getLogger(__name__)
 
 
 def load_als_jsonl(path: Path) -> pd.DataFrame:
@@ -77,4 +81,4 @@ def save_als_jsonl(df: pd.DataFrame, path: Path) -> None:
             }
             f.write(json.dumps(obj, ensure_ascii=False) + "\n")
 
-    print(f"[ALS_IO] 저장 완료: {path} ({len(df):,} rows)")
+    logger.info("[ALS_IO] 저장 완료: %s (%s rows)", path, f"{len(df):,}")

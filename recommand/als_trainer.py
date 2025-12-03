@@ -28,14 +28,12 @@ class ALSTrainer:
         regularization: float = 1e-3,
         iterations: int = 20,
         alpha: float = 40.0,
-        use_gpu: bool = False,
         random_state: int = 42,
     ) -> None:
         self.factors = factors
         self.regularization = regularization
         self.iterations = iterations
         self.alpha = alpha
-        self.use_gpu = use_gpu
         self.random_state = random_state
 
         self._rng = np.random.default_rng(self.random_state)
@@ -331,8 +329,8 @@ class ALSTrainer:
         r_ui_csr: csr_matrix,
         item_init: np.ndarray,
         val_user_positive_items: Optional[Dict[int, Set[int]]] = None,
-        eval_k: int = 10,
-        patience: int = 3,
+        eval_k: Optional[int] = 10,
+        patience: Optional[int] = 3,
     ) -> implicit.als.AlternatingLeastSquares:
         """주어진 item_init을 사용해 커스텀 ALS 학습."""
         num_users, _ = r_ui_csr.shape
@@ -356,6 +354,13 @@ class ALSTrainer:
             np.float32
         )
         item_factors = item_init.astype(np.float32)
+
+        # === early stopping을 쓸지 여부 결정 ===
+        use_early_stopping = (
+            bool(val_user_positive_items)  # None 또는 {} 이면 False
+            and eval_k is not None
+            and patience is not None
+        )
 
         best_hit = -1.0
         best_user_factors = None
@@ -383,7 +388,8 @@ class ALSTrainer:
                 user_factors,
             )
 
-            if val_user_positive_items is not None:
+            # === early stopping 사용 시에만 HitRate 계산 ===
+            if use_early_stopping:
                 hit = self._hit_rate_at_k(
                     user_factors, item_factors, val_user_positive_items, k=eval_k
                 )
@@ -408,7 +414,7 @@ class ALSTrainer:
                         break
 
         if (
-            val_user_positive_items is not None
+            use_early_stopping
             and best_user_factors is not None
             and best_item_factors is not None
         ):
@@ -425,7 +431,6 @@ class ALSTrainer:
             factors=self.factors,
             regularization=self.regularization,
             iterations=self.iterations,
-            use_gpu=self.use_gpu,
             random_state=self.random_state,
         )
         model.user_factors = user_factors_final.astype(np.float32)
@@ -445,8 +450,8 @@ class ALSTrainer:
         image_index_path: Optional[Path] = None,
         db_path: Optional[Path] = None,
         val_jsonl_path: Optional[Path] = None,
-        eval_k: int = 10,
-        patience: int = 3,
+        eval_k: Optional[int] = 10,
+        patience: Optional[int] = 3,
     ) -> None:
         df = self._load_df(jsonl_path)
         r_ui_confidence = self._build_confidence(df)
@@ -477,7 +482,6 @@ class ALSTrainer:
             )
             logger.info("[TRAIN] 이미지 임베딩 기반 item 초기값 사용")
         else:
-            # 이미지 없을 때는 완전 랜덤 초기값
             num_items = len(item_to_index)
             logger.info(
                 "[TRAIN] 이미지 초기값 없음 → 랜덤 item 초기값으로 커스텀 ALS 사용 (num_items=%d)",
@@ -488,11 +492,11 @@ class ALSTrainer:
                 size=(num_items, self.factors),
             ).astype(np.float32)
 
-            # 정규화(이미지 있을 때와 맞추기)
             norms = np.linalg.norm(item_init, axis=1, keepdims=True) + 1e-8
             item_init = item_init / norms
 
-        # 여기서부터는 항상 같은 학습 로직 사용
+        # === 여기서 eval_k / patience를 그대로 넘겨줌
+        #     (val_user_positive_items가 없으면 _train_als_with_item_init 안에서 무시됨)
         model = self._train_als_with_item_init(
             r_ui_csr=r_ui_csr,
             item_init=item_init,
@@ -509,7 +513,6 @@ class ALSTrainer:
         with (out_dir / "als_model.pkl").open("wb") as f:
             pickle.dump(model, f)
 
-        # 외부 호환성을 위해 pickle 키 이름은 기존(user2idx 등) 유지
         with (out_dir / "mappings.pkl").open("wb") as f:
             pickle.dump(
                 {
