@@ -8,8 +8,7 @@ import argparse
 from recommand.als_trainer import ALSTrainer
 
 """
-예시:
-
+# 1) train / val 둘 다 있는 경우 (early stopping 사용)
 python -m recommand.train_als \
     --train-jsonl data/als_splits_v2/train.jsonl \
     --val-jsonl   data/als_splits_v2/test.jsonl \
@@ -18,6 +17,17 @@ python -m recommand.train_als \
     --db-path data/fashion_items.db \
     --eval-k 200 \
     --patience 3 \
+    --factors 128 \
+    --regularization 0.005 \
+    --iterations 30 \
+    --alpha 50.0
+
+# 2) val 데이터 없이 순수 학습만 하는 경우 (early stopping X)
+python -m recommand.train_als \
+    --train-jsonl data/als_splits_v2_alltrain/train.jsonl \
+    --model-dir   models/als_v2_alltrain \
+    --image-index-path data/image_index_with_ids.faiss \
+    --db-path data/fashion_items.db \
     --factors 128 \
     --regularization 0.005 \
     --iterations 30 \
@@ -72,7 +82,6 @@ def parse_args() -> argparse.Namespace:
         help="HitRate@K가 개선되지 않을 때 허용할 epoch 수 (기본: 3)",
     )
 
-    # === 하이퍼파라미터 외부에서 받기 ===
     p.add_argument(
         "--factors",
         type=int,
@@ -119,19 +128,37 @@ def main():
         regularization=args.regularization,
         iterations=args.iterations,
         alpha=args.alpha,
-        use_gpu=False,  # 고정
         random_state=42,  # 고정
     )
 
-    trainer.train_and_save(
-        jsonl_path=train_path,
-        out_dir=model_dir,
-        image_index_path=image_index_path,
-        db_path=db_path,
-        val_jsonl_path=val_path,
-        eval_k=args.eval_k,
-        patience=args.patience,
-    )
+    if val_path is None:
+        # === 순수 학습만 진행 (validation / early stopping 없음) ===
+        logging.info("Validation jsonl 없이 학습만 진행합니다 (early stopping 미사용).")
+        trainer.train_and_save(
+            jsonl_path=train_path,
+            out_dir=model_dir,
+            image_index_path=image_index_path,
+            db_path=db_path,
+            val_jsonl_path=None,
+            eval_k=None,
+            patience=None,
+        )
+    else:
+        # === validation 포함, early stopping 사용 ===
+        logging.info(
+            "Validation jsonl(%s)을 사용해서 HitRate@%d 기준 early stopping을 사용합니다.",
+            val_path,
+            args.eval_k,
+        )
+        trainer.train_and_save(
+            jsonl_path=train_path,
+            out_dir=model_dir,
+            image_index_path=image_index_path,
+            db_path=db_path,
+            val_jsonl_path=val_path,
+            eval_k=args.eval_k,
+            patience=args.patience,
+        )
 
 
 if __name__ == "__main__":
