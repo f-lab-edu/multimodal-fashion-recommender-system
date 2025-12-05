@@ -25,10 +25,7 @@ logger = logging.getLogger(__name__)
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description=(
-            "Implicit ALS 평가 스크립트 ",
-            "(train/test jsonl → Precision@K / MAP@K)",
-        )
+        description="Implicit ALS 평가 스크립트 (train/test jsonl → Precision@K / MAP@K)"
     )
     p.add_argument(
         "--train-jsonl",
