@@ -11,9 +11,12 @@ python -m fashion_core.search_multimodal_service_demo  \
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 
-from fashion_core.multimodal_search_service import FashionSearchService
+from fashion_core.multimodal_search_engine import MultiModalSearchEngine
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -86,7 +89,12 @@ def parse_args():
 def main():
     args = parse_args()
 
-    service = FashionSearchService(
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
+    service = MultiModalSearchEngine(
         db_path=args.db_path,
         bm25_path=args.bm25_path,
         image_index_path=args.image_index_path,
@@ -106,21 +114,31 @@ def main():
     finally:
         service.close()
 
-    print(f"\n[QUERY] {args.query!r}\n")
-    print(f"[INFO] top-{args.top_k} fusion results:\n" + "=" * 80)
+    logger.info("")
+    logger.info("[QUERY] %r", args.query)
+    logger.info("[INFO] top-%d fusion results:", args.top_k)
+    logger.info("%s", "=" * 80)
 
     for r in results:
         title = (r["title"] or "")[:80] if r["title"] else "(no title)"
-        print(f"#{r['rank']}")
-        print(f"  asin       : {r['asin']}")
-        print(f"  item_id    : {r['item_id']}")
-        print(f"  title      : {title}")
-        print(f"  store      : {r['store'] or ''}")
-        print(f"  image_url  : {r['image_url'] or ''}")
-        print(f"  bm25_rank  : {r['bm25_rank']}  ", f"bm25_score={r['bm25_score']}")
-        print(f"  image_rank : {r['image_rank']}  ", f"image_score={r['image_score']}")
-        print(f"  rrf_score  : {r['rrf_score']:.6f}")
-        print("-" * 80)
+        logger.info("#%s", r["rank"])
+        logger.info("  asin       : %s", r["asin"])
+        logger.info("  item_id    : %s", r["item_id"])
+        logger.info("  title      : %s", title)
+        logger.info("  store      : %s", r["store"] or "")
+        logger.info("  image_url  : %s", r["image_url"] or "")
+        logger.info(
+            "  bm25_rank  : %s  bm25_score=%s",
+            r["bm25_rank"],
+            r["bm25_score"],
+        )
+        logger.info(
+            "  image_rank : %s  image_score=%s",
+            r["image_rank"],
+            r["image_score"],
+        )
+        logger.info("  rrf_score  : %.6f", r["rrf_score"])
+        logger.info("%s", "-" * 80)
 
 
 if __name__ == "__main__":
