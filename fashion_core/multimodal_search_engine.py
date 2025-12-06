@@ -1,4 +1,4 @@
-# fashion_core/multimodal_search_service.py
+# fashion_core/multimodal_search_engine.py
 from __future__ import annotations
 
 from dataclasses import asdict
@@ -13,7 +13,7 @@ from fashion_core.search_engine_rrf import BM25ClipFusionEngine
 from fashion_core.search_results import FusionHit
 
 
-class FashionSearchService:
+class MultiModalSearchEngine:
     """
     - BM25TextSearchEngine + DbImageSearchEngine + BM25ClipFusionEngine
     를 한 번에 묶어서 사용하는 서비스 레이어.

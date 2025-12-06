@@ -6,6 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional
 
+import logging
 import pickle
 import sqlite3
 
@@ -14,6 +15,8 @@ from rank_bm25 import BM25Okapi
 
 from .search_results import SearchHit, TokenizeFn
 from .search_utils import load_item_meta_for_ids, deduplicate_hits_by_asin
+
+logger = logging.getLogger(__name__)
 
 
 # BM25 텍스트 엔진
@@ -47,7 +50,11 @@ class BM25TextSearchEngine:
             data = pickle.load(f)
         self.bm25: BM25Okapi = data["bm25"]
         self.item_ids: List[int] = data["item_ids"]
-        print(f"[BM25TextSearchEngine] Loaded BM25: docs={len(self.item_ids)}")
+
+        logger.info(
+            "[BM25TextSearchEngine] Loaded BM25: docs=%d",
+            len(self.item_ids),
+        )
 
         # tokenizer
         if tokenizer is None:
@@ -57,7 +64,7 @@ class BM25TextSearchEngine:
 
     def search(self, query: str, top_k: int = 10) -> List[SearchHit]:
         tokens = self.tokenizer(query)
-        print(f"[BM25TextSearchEngine] query tokens = {tokens}")
+        logger.info("[BM25TextSearchEngine] query tokens = %s", tokens)
 
         scores = self.bm25.get_scores(tokens)
         if len(scores) == 0:
@@ -91,7 +98,7 @@ class BM25TextSearchEngine:
 
         return deduplicate_hits_by_asin(hits, requested_top_k)
 
-    def close(self):
+    def close(self) -> None:
         if getattr(self, "conn", None) is not None:
             self.conn.close()
             self.conn = None
