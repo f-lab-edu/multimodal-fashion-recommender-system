@@ -5,9 +5,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import argparse
 import sqlite3
 from pathlib import Path
+import logging
 
 import requests
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 SESSION = requests.Session()
@@ -27,7 +30,12 @@ def download_one_image(item_id: int, url: str, dest: Path) -> bool:
         dest.write_bytes(resp.content)
         return True
     except Exception as e:
-        print(f"[WARN] failed to download item_id={item_id} from {url}: {e}")
+        logger.warning(
+            "[WARN] failed to download item_id=%s from %s: %s",
+            item_id,
+            url,
+            e,
+        )
         return False
 
 
@@ -58,6 +66,11 @@ def parse_args():
 
 def main():
     args = parse_args()
+    logging.basicConfig(  # ✅ 기본 로깅 설정
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     db_path: Path = args.db_path
     image_root: Path = args.image_root
     max_workers: int = args.max_workers
@@ -83,7 +96,7 @@ def main():
 
     jobs: list[tuple[int, str]] = [(row["id"], row["image_main_url"]) for row in rows]
 
-    print(f"[download_images_items] download_jobs={len(jobs)}")
+    logger.info("[download_images_items] download_jobs=%d", len(jobs))
 
     downloaded = 0
 
@@ -104,10 +117,12 @@ def main():
                 if fut.result():
                     downloaded += 1
             except Exception as e:
-                print(f"[WARN] unexpected error in worker: {e}")
+                logger.warning("[WARN] unexpected error in worker: %s", e)
 
-    print(
-        f"[download_images_items] downloaded={downloaded}, skipped={len(jobs) - downloaded}"
+    logger.info(
+        "[download_images_items] downloaded=%d, skipped=%d",
+        downloaded,
+        len(jobs) - downloaded,
     )
 
 

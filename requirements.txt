@@ -25,5 +25,5 @@ faiss-gpu-cu12==1.12.0
 notebook==6.5.4
 ipykernel==6.28.0
 
-# Translate
-googletrans==4.0.0-rc1
+# recommand cf
+implicit==0.7.2

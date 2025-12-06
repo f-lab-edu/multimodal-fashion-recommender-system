@@ -5,10 +5,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 from pathlib import Path
 from typing import Optional, Tuple
+import logging
 
 import requests
 from tqdm import tqdm
 
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 INPUT_JSONL = PROJECT_ROOT / "data" / "meta_with_garment_label.jsonl"
@@ -81,7 +83,7 @@ def download_one_image(asin: str, url: str, dest: Path) -> bool:
         dest.write_bytes(resp.content)
         return True
     except Exception as e:
-        print(f"[WARN] failed to download {asin} from {url}: {e}")
+        logger.warning("[WARN] failed to download %s from %s: %s", asin, url, e)
         return False
 
 
@@ -110,14 +112,27 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    logging.basicConfig(  # ✅ 기본 로깅 설정
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     input_jsonl: Path = args.jsonl_path
     image_root: Path = args.image_root
 
     image_root.mkdir(parents=True, exist_ok=True)
 
     total_lines = sum(1 for _ in input_jsonl.open("r", encoding="utf-8"))
-    print(f"[download_images] reading {total_lines} lines from {input_jsonl}")
-    print(f"[download_images] saving images under {image_root}")
+    logger.info(
+        "[download_images] reading %d lines from %s",
+        total_lines,
+        input_jsonl,
+    )
+    logger.info(
+        "[download_images] saving images under %s",
+        image_root,
+    )
 
     seen_keys = set()
     jobs: list[tuple[str, str]] = []
@@ -143,7 +158,11 @@ def main():
 
             jobs.append((key, url))
 
-    print(f"[download_images] total jobs={len(jobs)}, skipped_no_url={skipped_no_url}")
+    logger.info(
+        "[download_images] total jobs=%d, skipped_no_url=%d",
+        len(jobs),
+        skipped_no_url,
+    )
 
     # 2단계: 병렬 다운로드
     downloaded = 0
@@ -164,11 +183,12 @@ def main():
                     downloaded += 1
             except Exception as e:
                 # 혹시라도 download_one_image에서 처리 안 된 예외가 튀어나오면
-                print(f"[WARN] unexpected error in worker: {e}")
+                logger.warning("[WARN] unexpected error in worker: %s", e)
 
-    print(
-        f"[download_images] downloaded={downloaded}, "
-        f"skipped_no_url={skipped_no_url}"
+    logger.info(
+        "[download_images] downloaded=%d, skipped_no_url=%d",
+        downloaded,
+        skipped_no_url,
     )
 
 
