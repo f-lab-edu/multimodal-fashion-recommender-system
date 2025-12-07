@@ -1,4 +1,4 @@
 # config/als_model.yaml
-model_dir: "models/als_v2_alltrain" # 모델 저장 디렉터리
-model_version: "als_v2_alltrain_2025-12-03" # 로그/ 모니터링할때
+model_dir: "models/als_warm_v1" # 모델 저장 디렉터리
+model_version: "als_warm_v1_2025-12-03" # 로그/ 모니터링할때
 w_als: 0.3  # 개인화 가중치

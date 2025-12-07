@@ -11,6 +11,9 @@ import yaml
 class ALSReRanker:
     """
     ALS 모델을 사용하여 검색 결과를 개인맞춤 재정렬
+    - 1단계: user_id가 ALS 학습셋에 있으면 user→item 기반 rerank
+    - 2단계: user_id는 쓸 수 없지만 session_item_ids가 있으면 item2item 기반 rerank
+    - 3단계: 둘 다 없으면 ALS로는 재정렬 불가 → None 반환
     """
 
     def __init__(
@@ -62,45 +65,92 @@ class ALSReRanker:
             return np.zeros_like(x, dtype=np.float32)
         return (x - x_min) / (x_max - x_min)
 
-    def _compute_als_scores(
+    def _compute_user_item_scores(
         self,
         user_idx: int,
         item_indices: List[Optional[int]],
     ) -> np.ndarray:
+        """
+        1단계: user factor가 있는 경우 user→item 점수 계산
+        """
         als_scores = np.zeros(len(item_indices), dtype=np.float32)
         u_vec = self.user_factors[user_idx]
 
         for i, item_idx in enumerate(item_indices):
             if item_idx is None:
-                als_scores[i] = 0.0
                 continue
             if item_idx < 0 or item_idx >= self.item_factors.shape[0]:
-                als_scores[i] = 0.0
                 continue
             i_vec = self.item_factors[item_idx]
             als_scores[i] = float(u_vec @ i_vec)
 
         return als_scores
 
+    def _compute_session_item_scores(
+        self,
+        session_item_ids: List[str],
+        item_indices: List[Optional[int]],
+    ) -> Optional[np.ndarray]:
+        """
+        2단계: 장바구니 session_item_ids 기반 item2item 점수 계산
+
+        - session_item_ids → item factor 평균 → 세션 벡터
+        - 세션 벡터와 각 후보 아이템 factor의 dot-product
+        - 유효한 세션 아이템이 하나도 없으면 None 반환
+        """
+        # 세션 아이템들을 ALS index로 변환
+        session_indices: List[int] = []
+        for sid in session_item_ids:
+            idx = self.item2idx.get(sid)
+            if idx is None:
+                continue
+            if idx < 0 or idx >= self.item_factors.shape[0]:
+                continue
+            session_indices.append(idx)
+
+        if not session_indices:
+            # 사용할 수 있는 세션 아이템이 하나도 없음
+            return None
+
+        # 세션 벡터 = 세션 내 아이템 factor 평균
+        session_vecs = self.item_factors[session_indices]  # (S, K)
+        s_vec = session_vecs.mean(axis=0)  # (K,)
+
+        als_scores = np.zeros(len(item_indices), dtype=np.float32)
+        for i, item_idx in enumerate(item_indices):
+            if item_idx is None:
+                continue
+            if item_idx < 0 or item_idx >= self.item_factors.shape[0]:
+                continue
+            i_vec = self.item_factors[item_idx]
+            als_scores[i] = float(s_vec @ i_vec)
+
+        return als_scores
+
     def rerank(
         self,
-        user_id: str,
+        user_id: Optional[str],
         results: List[Dict[str, Any]],
+        session_item_ids: Optional[List[str]] = None,
         top_k: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> Optional[List[Dict[str, Any]]]:
+        """
+        검색 결과를 ALS 기반으로 재정렬.
+
+        반환:
+            - ALS를 사용한 경우: score_final 기준으로 정렬된 results
+            - ALS로 점수를 줄 수 없는 경우(3단계): None
+        """
         if not results:
-            return results
+            return []
 
-        user_idx = self.user2idx.get(user_id)
-        if user_idx is None:
-            # cold-start 유저 -> 원래 점수 그대로
-            return results if top_k is None else results[:top_k]
-
+        # 1) base 점수
         base_scores = np.array(
             [float(r.get(self.score_key, 0.0)) for r in results],
             dtype=np.float32,
         )
 
+        # 2) 후보 아이템들의 ALS index
         item_indices: List[Optional[int]] = []
         for r in results:
             item_id = r.get(self.item_key)
@@ -109,8 +159,32 @@ class ALSReRanker:
             else:
                 item_indices.append(self.item2idx.get(item_id))
 
-        als_scores = self._compute_als_scores(user_idx, item_indices)
+        als_scores: Optional[np.ndarray] = None
+        als_mode: Optional[str] = None
 
+        # 1단계: user factor가 있는 경우
+        user_idx: Optional[int] = None
+        if user_id is not None:
+            user_idx = self.user2idx.get(user_id)
+
+        if user_idx is not None:
+            als_scores = self._compute_user_item_scores(user_idx, item_indices)
+            als_mode = "user"
+
+        # 2단계: user는 못 쓰지만 session_item_ids가 있는 경우
+        if als_scores is None and session_item_ids:
+            session_scores = self._compute_session_item_scores(
+                session_item_ids, item_indices
+            )
+            if session_scores is not None:
+                als_scores = session_scores
+                als_mode = "session_items"
+
+        # 3단계: ALS로 점수를 줄 수 없는 경우
+        if als_scores is None:
+            return None
+
+        # 4) base + ALS 스코어 결합
         base_norm = self._minmax_norm(base_scores)
         als_norm = self._minmax_norm(als_scores)
 
@@ -121,7 +195,8 @@ class ALSReRanker:
             r["score_base_norm"] = float(b)
             r["score_als_norm"] = float(a)
             r["score_final"] = float(f)
-            r["als_model_version"] = self.model_version  # 디버깅 용
+            r["als_model_version"] = self.model_version
+            r["als_mode"] = als_mode  # "user" or "session_items"
 
         results_sorted = sorted(
             results,
