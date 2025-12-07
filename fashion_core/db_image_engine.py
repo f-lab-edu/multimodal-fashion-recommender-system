@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import sqlite3
+import logging
 
 import faiss
 import numpy as np
@@ -15,6 +16,8 @@ from transformers import CLIPModel, CLIPProcessor
 
 from .search_results import SearchHit, TokenizeFn
 from .search_utils import load_item_meta_for_ids, deduplicate_hits_by_asin
+
+logger = logging.getLogger(__name__)  # ✅ 추가
 
 
 # CLIP + FAISS + DB 이미지 엔진
@@ -46,7 +49,10 @@ class DbImageSearchEngine:
 
         # FAISS
         self.index = faiss.read_index(str(self.index_path))
-        print(f"[DbImageSearchEngine] Loaded FAISS index: ntotal={self.index.ntotal}")
+        logger.info(  # ✅ print → logger
+            "[DbImageSearchEngine] Loaded FAISS index: ntotal=%d",
+            self.index.ntotal,
+        )
 
         # device
         if device is None:
@@ -56,8 +62,10 @@ class DbImageSearchEngine:
         # CLIP
         self.model = CLIPModel.from_pretrained(self.model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(self.model_name)
-        print(
-            f"[DbImageSearchEngine] Using device={self.device}, model={self.model_name}"
+        logger.info(  # ✅ print → logger
+            "[DbImageSearchEngine] Using device=%s, model=%s",
+            self.device,
+            self.model_name,
         )
 
         # tokenizer
@@ -74,7 +82,10 @@ class DbImageSearchEngine:
     def _encode_text_query(self, query: str) -> np.ndarray:
         tokens = self.tokenizer(query)
         norm_query = " ".join(tokens)
-        print(f"[DbImageSearchEngine] norm_query = {norm_query!r}")
+        logger.info(  # ✅ print → logger
+            "[DbImageSearchEngine] norm_query = %r",
+            norm_query,
+        )
 
         inputs = self.processor(
             text=[norm_query],

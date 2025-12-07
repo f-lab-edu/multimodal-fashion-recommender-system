@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 from typing import Dict, List
+import logging
 
 from .bm25_text_engine import BM25TextSearchEngine
 from .db_image_engine import DbImageSearchEngine
 from .search_results import FusionHit
+
+logger = logging.getLogger(__name__)
 
 
 class BM25ClipFusionEngine:
@@ -158,13 +161,18 @@ class BM25ClipFusionEngine:
     ) -> List[FusionHit]:
         stage1_k = max(top_k, top_k * stage1_factor)
 
-        print(f"[Fusion] query={query!r}, stage1_k={stage1_k}, final_top_k={top_k}")
+        logger.info(
+            "[Fusion] query=%r, stage1_k=%d, final_top_k=%d",
+            query,
+            stage1_k,
+            top_k,
+        )
 
         bm25_hits = self.text_engine.search(query=query, top_k=stage1_k)
-        print(f"[Fusion] BM25 hits(stage1) = {len(bm25_hits)}")
+        logger.info("[Fusion] BM25 hits(stage1) = %d", len(bm25_hits))
 
         image_hits = self.image_engine.search(query=query, top_k=stage1_k)
-        print(f"[Fusion] Image hits(stage1) = {len(image_hits)}")
+        logger.info("[Fusion] Image hits(stage1) = %d", len(image_hits))
 
         fused: Dict[str, FusionHit] = {}
 
