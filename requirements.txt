@@ -22,6 +22,3 @@ implicit==0.7.2
 
 # Vector Search (GPU)
 faiss-gpu-cu12==1.12.0
-
-# Database
-sqlite3==2.6.0
