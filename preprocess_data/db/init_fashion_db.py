@@ -2,6 +2,7 @@
 from pathlib import Path
 import sqlite3
 import argparse
+import logging
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS items(
@@ -52,6 +53,8 @@ CREATE TABLE IF NOT EXISTS item_docs (
 );
 """
 
+logger = logging.getLogger(__name__)
+
 
 def parse_args():
     p = argparse.ArgumentParser()
@@ -65,6 +68,11 @@ def parse_args():
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     args = parse_args()
     db_path: Path = args.db_path
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -73,7 +81,7 @@ def main():
     try:
         conn.executescript(SCHEMA_SQL)
         conn.commit()
-        print(f"[INFO] Initialized DB schema at {db_path}")
+        logger.info("[INFO] Initialized DB schema at %s", db_path)
     finally:
         conn.close()
 

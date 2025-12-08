@@ -9,7 +9,10 @@ from typing import Any, Dict, Optional
 
 from tqdm import tqdm
 import argparse
-from scripts.text_normalization import tokenize
+from common.text_normalization import tokenize
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def pick_main_image_url(item: Dict[str, Any]) -> Optional[str]:
@@ -177,6 +180,11 @@ def parse_args():
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     args = parse_args()
     jsonl_path: Path = args.jsonl_path
     db_path: Path = args.db_path
@@ -219,16 +227,16 @@ def main():
 
                 if inserted % args.commit_interval == 0:
                     conn.commit()
-                    print(f"[INFO] committed {inserted} items")
+                    logger.info("[INFO] committed %s items", f"{inserted:,}")
 
             conn.commit()
     finally:
         conn.close()
 
-    print(f"[INFO] Done. Inserted {inserted} items into DB: {db_path}")
-    print(f"[INFO] Total lines (raw):        {total_lines}")
-    print(f"[INFO] Non-empty JSON lines:     {nonempty_lines}")
-    print(f"[INFO] items in DB (by script):  {inserted}")
+    logger.info("[INFO] Done. Inserted %s items into DB: %s", f"{inserted:,}", db_path)
+    logger.info("[INFO] Total lines (raw):        %s", f"{total_lines:,}")
+    logger.info("[INFO] Non-empty JSON lines:     %s", f"{nonempty_lines:,}")
+    logger.info("[INFO] items in DB (by script):  %s", f"{inserted:,}")
 
 
 if __name__ == "__main__":

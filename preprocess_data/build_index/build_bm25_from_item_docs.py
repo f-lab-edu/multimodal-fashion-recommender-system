@@ -5,10 +5,13 @@ import argparse
 import sqlite3
 from pathlib import Path
 from typing import List
+import logging
 
 import pickle
 from tqdm import tqdm
 from rank_bm25 import BM25Okapi
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -35,6 +38,11 @@ def parse_args():
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     args = parse_args()
     db_path: Path = args.db_path
     out_path: Path = args.output_path
@@ -55,11 +63,11 @@ def main():
     )
     rows = cur.fetchall()
     total = len(rows)
-    print(f"[INFO] item_docs rows = {total}")
+    logger.info("[INFO] item_docs rows = %s", total)
 
     if args.max_items is not None:
         rows = rows[: args.max_items]
-        print(f"[INFO] limiting to first {len(rows)} docs")
+        logger.info("[INFO] limiting to first %s docs", len(rows))
 
     docs_tokens: List[List[str]] = []
     item_ids: List[int] = []
@@ -74,7 +82,7 @@ def main():
 
     conn.close()
 
-    print("[INFO] Building BM25 index ...")
+    logger.info("[INFO] Building BM25 index ...")
     bm25 = BM25Okapi(docs_tokens)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,7 +95,7 @@ def main():
             f,
         )
 
-    print(f"[INFO] Saved BM25 index to {out_path}")
+    logger.info("[INFO] Saved BM25 index to %s", out_path)
 
 
 if __name__ == "__main__":

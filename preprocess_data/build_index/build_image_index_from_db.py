@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 from typing import List, Optional, Iterable, Tuple
+import logging
 
 import faiss
 import numpy as np
@@ -16,6 +17,8 @@ from transformers import CLIPModel, CLIPProcessor
 
 
 FASHION_CLIP_MODEL_NAME = "patrickjohncyh/fashion-clip"
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -105,11 +108,11 @@ def _log_config(
     model_name: str,
     device: str,
 ) -> None:
-    print(f"[INFO] DB         = {db_path}")
-    print(f"[INFO] IMAGE_ROOT = {image_root}")
-    print(f"[INFO] INDEX_PATH = {index_path}")
-    print(f"[INFO] MODEL      = {model_name}")
-    print(f"[INFO] DEVICE     = {device}")
+    logger.info("[INFO] DB         = %s", db_path)
+    logger.info("[INFO] IMAGE_ROOT = %s", image_root)
+    logger.info("[INFO] INDEX_PATH = %s", index_path)
+    logger.info("[INFO] MODEL      = %s", model_name)
+    logger.info("[INFO] DEVICE     = %s", device)
 
 
 def _validate_paths(db_path: Path, image_root: Path) -> None:
@@ -136,11 +139,15 @@ def _load_items_with_images(
         rows = cur.fetchall()
 
     total_candidates = len(rows)
-    print(f"[INFO] items with image_main_url = {total_candidates}")
+    logger.info("[INFO] items with image_main_url = %s", total_candidates)
 
     if max_items is not None:
         rows = rows[:max_items]
-        print(f"[INFO] limiting to first {len(rows)} items (max_items={max_items})")
+        logger.info(
+            "[INFO] limiting to first %s items (max_items=%s)",
+            len(rows),
+            max_items,
+        )
 
     return rows
 
@@ -197,7 +204,7 @@ def _build_index_from_rows(
         try:
             img = Image.open(img_path).convert("RGB")
         except Exception as e:
-            print(f"[WARN] failed to open image for item_id={item_id}: {e}")
+            logger.warning("[WARN] failed to open image for item_id=%s: %s", item_id, e)
             continue
 
         batch_ids.append(item_id)
@@ -222,13 +229,20 @@ def _build_index_from_rows(
             "No image embeddings were added. Check image_root / DB filtering."
         )
 
-    print(
-        f"[INFO] Built image index with {index.ntotal} vectors (added_count={added_count})."
+    logger.info(
+        "[INFO] Built image index with %s vectors (added_count=%s).",
+        index.ntotal,
+        added_count,
     )
     return index
 
 
 def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    )
+
     args = parse_args()
 
     db_path: Path = args.db_path
@@ -259,7 +273,7 @@ def main():
     # 4) 인덱스 저장
     index_path.parent.mkdir(parents=True, exist_ok=True)
     faiss.write_index(index, str(index_path))
-    print(f"[INFO] Saved FAISS index to {index_path}")
+    logger.info("[INFO] Saved FAISS index to %s", index_path)
 
 
 if __name__ == "__main__":
