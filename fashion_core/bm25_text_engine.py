@@ -41,9 +41,9 @@ class BM25TextSearchEngine:
         if not self.bm25_path.exists():
             raise FileNotFoundError(f"BM25 file not found: {self.bm25_path}")
 
-        # DB 연결
-        self.conn = sqlite3.connect(str(self.db_path))
-        self.conn.row_factory = sqlite3.Row
+        # # DB 연결
+        # self.conn = sqlite3.connect(str(self.db_path))
+        # self.conn.row_factory = sqlite3.Row
 
         # BM25 로드
         with self.bm25_path.open("rb") as f:
@@ -62,7 +62,12 @@ class BM25TextSearchEngine:
         else:
             self.tokenizer = tokenizer
 
-    def search(self, query: str, top_k: int = 10) -> List[SearchHit]:
+    def search(
+        self,
+        query: str,
+        conn: sqlite3.Connection,
+        top_k: int = 10,
+    ) -> List[SearchHit]:
         tokens = self.tokenizer(query)
         logger.info("[BM25TextSearchEngine] query tokens = %s", tokens)
 
@@ -78,7 +83,7 @@ class BM25TextSearchEngine:
 
         # item_ids 매핑
         top_item_ids = [int(self.item_ids[i]) for i in top_idx]
-        meta_map = load_item_meta_for_ids(self.conn, top_item_ids)
+        meta_map = load_item_meta_for_ids(conn, top_item_ids)
 
         hits: List[SearchHit] = []
         for rank, idx in enumerate(top_idx, start=1):
@@ -98,7 +103,7 @@ class BM25TextSearchEngine:
 
         return deduplicate_hits_by_asin(hits, requested_top_k)
 
-    def close(self) -> None:
-        if getattr(self, "conn", None) is not None:
-            self.conn.close()
-            self.conn = None
+    # def close(self) -> None:
+    #     if getattr(self, "conn", None) is not None:
+    #         self.conn.close()
+    #         self.conn = None

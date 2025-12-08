@@ -1,0 +1,15 @@
+-r requirements.txt
+
+# Data / EDA
+pandas==2.2.2
+
+# Vision / 모델 실험용
+timm==1.0.9
+open_clip_torch==2.26.1
+
+# Notebook / IDE 통합
+ipykernel
+jupyter
+
+# 시각화
+matplotlib

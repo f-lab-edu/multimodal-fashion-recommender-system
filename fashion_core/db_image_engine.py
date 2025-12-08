@@ -17,7 +17,7 @@ from transformers import CLIPModel, CLIPProcessor
 from .search_results import SearchHit, TokenizeFn
 from .search_utils import load_item_meta_for_ids, deduplicate_hits_by_asin
 
-logger = logging.getLogger(__name__)  # ✅ 추가
+logger = logging.getLogger(__name__)
 
 
 # CLIP + FAISS + DB 이미지 엔진
@@ -43,13 +43,13 @@ class DbImageSearchEngine:
         if not self.index_path.exists():
             raise FileNotFoundError(f"FAISS index not found: {self.index_path}")
 
-        # DB
-        self.conn = sqlite3.connect(str(self.db_path))
-        self.conn.row_factory = sqlite3.Row
+        # # DB
+        # self.conn = sqlite3.connect(str(self.db_path))
+        # self.conn.row_factory = sqlite3.Row
 
         # FAISS
         self.index = faiss.read_index(str(self.index_path))
-        logger.info(  # ✅ print → logger
+        logger.info(
             "[DbImageSearchEngine] Loaded FAISS index: ntotal=%d",
             self.index.ntotal,
         )
@@ -62,7 +62,7 @@ class DbImageSearchEngine:
         # CLIP
         self.model = CLIPModel.from_pretrained(self.model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(self.model_name)
-        logger.info(  # ✅ print → logger
+        logger.info(
             "[DbImageSearchEngine] Using device=%s, model=%s",
             self.device,
             self.model_name,
@@ -82,7 +82,7 @@ class DbImageSearchEngine:
     def _encode_text_query(self, query: str) -> np.ndarray:
         tokens = self.tokenizer(query)
         norm_query = " ".join(tokens)
-        logger.info(  # ✅ print → logger
+        logger.info(
             "[DbImageSearchEngine] norm_query = %r",
             norm_query,
         )
@@ -103,7 +103,9 @@ class DbImageSearchEngine:
         emb = self._normalize(emb)
         return emb  # shape: (1, d)
 
-    def search(self, query: str, top_k: int = 10) -> List[SearchHit]:
+    def search(
+        self, query: str, conn: sqlite3.Connection, top_k: int = 10
+    ) -> List[SearchHit]:
         q_emb = self._encode_text_query(query)  # (1, d)
 
         raw_top_k = min(top_k * 3, self.index.ntotal)
@@ -117,7 +119,7 @@ class DbImageSearchEngine:
             return []
 
         item_ids = [i for i, _ in valid]
-        meta_map = load_item_meta_for_ids(self.conn, item_ids)
+        meta_map = load_item_meta_for_ids(conn, item_ids)
 
         hits: List[SearchHit] = []
         for rank_raw, (item_id, score) in enumerate(valid, start=1):

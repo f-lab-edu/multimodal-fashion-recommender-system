@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from fashion_core.multimodal_search_engine import MultiModalSearchEngine
-from recommend.als_reranker import ALSReRanker
+from fashion_core.als_reranker import ALSReRanker
 
 logger = logging.getLogger(__name__)
 

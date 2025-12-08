@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 import logging
+import sqlite3
 
 from .bm25_text_engine import BM25TextSearchEngine
 from .db_image_engine import DbImageSearchEngine
@@ -158,6 +159,7 @@ class BM25ClipFusionEngine:
         query: str,
         top_k: int = 10,
         stage1_factor: int = 3,
+        conn: sqlite3.Connection = None,
     ) -> List[FusionHit]:
         stage1_k = max(top_k, top_k * stage1_factor)
 
@@ -168,10 +170,18 @@ class BM25ClipFusionEngine:
             top_k,
         )
 
-        bm25_hits = self.text_engine.search(query=query, top_k=stage1_k)
+        bm25_hits = self.text_engine.search(
+            query=query,
+            top_k=stage1_k,
+            conn=conn,  # ✅ conn 넘김
+        )
         logger.info("[Fusion] BM25 hits(stage1) = %d", len(bm25_hits))
 
-        image_hits = self.image_engine.search(query=query, top_k=stage1_k)
+        image_hits = self.image_engine.search(
+            query=query,
+            top_k=stage1_k,
+            conn=conn,  # ✅ conn 넘김
+        )
         logger.info("[Fusion] Image hits(stage1) = %d", len(image_hits))
 
         fused: Dict[str, FusionHit] = {}
