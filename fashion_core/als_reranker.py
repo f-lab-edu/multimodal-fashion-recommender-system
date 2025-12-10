@@ -88,12 +88,23 @@ class ALSReRanker:
         als_scores = np.zeros(len(item_indices), dtype=np.float32)
         u_vec = self.user_factors[user_idx]
 
-        for i, raw_idx in enumerate(item_indices):
+        valid_positions: List[int] = []
+        valid_indices: List[int] = []
+        for pos, raw_idx in enumerate(item_indices):
             item_idx = self._normalize_item_index(raw_idx)
             if item_idx is None:
                 continue
-            i_vec = self.item_factors[item_idx]
-            als_scores[i] = float(u_vec @ i_vec)
+            valid_positions.append(pos)  # als_scores에서의 위치
+            valid_indices.append(item_idx)
+
+        if not valid_indices:
+            return als_scores
+
+        item_mat = self.item_factors[valid_indices]  # (N, K)
+        scores_vec = item_mat @ u_vec  # (N,)
+
+        for pos, s in zip(valid_positions, scores_vec):
+            als_scores[pos] = float(s)
 
         return als_scores
 
