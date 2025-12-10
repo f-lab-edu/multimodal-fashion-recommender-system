@@ -63,6 +63,24 @@ class FashionSearchService:
           "meta": {...}
         }
         """
+        # 입력 검증
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("`query`를 입력해야 합니다.")
+
+        if not isinstance(top_k, int) or top_k <= 0:
+            raise ValueError("`top_k`는 1 이상의 정수여야 합니다.")
+
+        if not isinstance(stage1_factor, int) or stage1_factor <= 0:
+            raise ValueError("`stage1_factor`는 1 이상의 정수여야 합니다.")
+
+        if session_item_ids is not None:
+            if not isinstance(session_item_ids, list):
+                raise ValueError("`session_item_ids`는 문자열 리스트여야 합니다.")
+            for sid in session_item_ids:
+                if not isinstance(sid, str) or not sid.strip():
+                    raise ValueError(
+                        "`session_item_ids`에는 빈 문자열을 넣을 수 없습니다."
+                    )
 
         results = self.engine.search(
             query=query,
