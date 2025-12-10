@@ -103,7 +103,7 @@ class BM25TextSearchEngine:
 
         return deduplicate_hits_by_asin(hits, requested_top_k)
 
-    # def close(self) -> None:
-    #     if getattr(self, "conn", None) is not None:
-    #         self.conn.close()
-    #         self.conn = None
+    def close(self) -> None:
+        if getattr(self, "conn", None) is not None:
+            self.conn.close()
+            self.conn = None

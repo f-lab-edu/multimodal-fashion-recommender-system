@@ -103,9 +103,13 @@ class ALSReRanker:
         for sid in session_item_ids:
             idx = self.item2idx.get(sid)
             if idx is None:
-                continue
+                raise KeyError(
+                    f"Unknown item id in session: {sid}, 데이터 버전 확인바람"
+                )
             if idx < 0 or idx >= self.item_factors.shape[0]:
-                continue
+                raise IndexError(
+                    f"Item index out of range: sid={sid}, idx={idx}, 데이터 버전 확인바람"
+                )
             session_indices.append(idx)
 
         if not session_indices:
