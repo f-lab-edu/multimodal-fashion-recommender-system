@@ -82,16 +82,30 @@ class FashionSearchService:
                         "`session_item_ids`에는 빈 문자열을 넣을 수 없습니다."
                     )
 
-        results = self.engine.search(
-            query=query,
-            top_k=top_k,
-            stage1_factor=stage1_factor,
-            user_id=user_id,
-            session_item_ids=session_item_ids,
-        )
+        try:
+            results = self.engine.search(
+                query=query,
+                top_k=top_k,
+                stage1_factor=stage1_factor,
+                user_id=user_id,
+                session_item_ids=session_item_ids,
+            )
+            success = True
+            error: Optional[Dict[str, Any]] = None
+
+        except Exception as e:
+            results = []
+            success = False
+            error = {
+                "code": "INTERNAL_ERROR",
+                "message": "검색 도중 내부 에러가 발생했습니다.",
+                "details": str(e),
+            }
 
         return {
             "results": results,
+            "success": success,
+            "error": error,
             "meta": {
                 "query": query,
                 "top_k": top_k,
