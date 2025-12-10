@@ -38,31 +38,13 @@ class FashionSearchService:
             w_image=1.0,
         )
 
-    @bentoml.api
-    def search(
-        self,
-        query: str,
-        user_id: Optional[str] = None,
-        session_item_ids: Optional[List[str]] = None,
-        top_k: int = 10,
-        stage1_factor: int = 3,
-    ) -> Dict[str, Any]:
-        """
-        example request body:
-        {
-          "query": "black linen shirts",
-          "user_id": "AE23BYWB52METWQVHSPN3MKN7AJA",      // optional
-          "session_item_ids": ["B08FGCD1FC", "B09JB7H124"],      // optional
-          "top_k": 50,
-          "stage1_factor": 3
-        }
-
-        response:
-        {
-          "results": [...],
-          "meta": {...}
-        }
-        """
+    @staticmethod
+    def _validate_input(
+        query: Any,
+        top_k: Any,
+        stage1_factor: Any,
+        session_item_ids: Any,
+    ) -> None:
         # 입력 검증
         if not isinstance(query, str) or not query.strip():
             raise ValueError("`query`를 입력해야 합니다.")
@@ -81,6 +63,33 @@ class FashionSearchService:
                     raise ValueError(
                         "`session_item_ids`에는 빈 문자열을 넣을 수 없습니다."
                     )
+
+    @bentoml.api
+    def search(
+        self,
+        query: str,
+        user_id: Optional[str] = None,
+        session_item_ids: Optional[List[str]] = None,
+        top_k: int = 10,
+        stage1_factor: int = 3,
+    ) -> Dict[str, Any]:
+        """
+        example request body:
+        {
+          "query": "black linen shirts",
+          "user_id": "AE23BYWB52METWQVHSPN3MKN7AJA",      // optional
+          "session_item_ids": ["B08FGCD1FC", "B09JB7H124"],      // optional
+          "top_k": 50,
+          "stage1_factor": 3
+        }
+        """
+        # 입력 검증
+        self._validate_input(
+            query=query,
+            top_k=top_k,
+            stage1_factor=stage1_factor,
+            session_item_ids=session_item_ids,
+        )
 
         try:
             results = self.engine.search(
