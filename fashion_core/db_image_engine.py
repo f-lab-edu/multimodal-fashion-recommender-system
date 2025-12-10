@@ -43,10 +43,6 @@ class DbImageSearchEngine:
         if not self.index_path.exists():
             raise FileNotFoundError(f"FAISS index not found: {self.index_path}")
 
-        # # DB
-        # self.conn = sqlite3.connect(str(self.db_path))
-        # self.conn.row_factory = sqlite3.Row
-
         # FAISS
         self.index = faiss.read_index(str(self.index_path))
         logger.info(

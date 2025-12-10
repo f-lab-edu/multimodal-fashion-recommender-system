@@ -41,10 +41,6 @@ class BM25TextSearchEngine:
         if not self.bm25_path.exists():
             raise FileNotFoundError(f"BM25 file not found: {self.bm25_path}")
 
-        # # DB 연결
-        # self.conn = sqlite3.connect(str(self.db_path))
-        # self.conn.row_factory = sqlite3.Row
-
         # BM25 로드
         with self.bm25_path.open("rb") as f:
             data = pickle.load(f)
