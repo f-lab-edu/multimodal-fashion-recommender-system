@@ -65,6 +65,18 @@ class ALSReRanker:
             return np.zeros_like(x, dtype=np.float32)
         return (x - x_min) / (x_max - x_min)
 
+    def _normalize_item_index(self, item_idx: Optional[int]) -> Optional[int]:
+        """
+        후보 아이템용 인덱스 정규화/검증:
+        - None 이거나 범위 밖이면 None 리턴 → 호출측에서 그냥 스킵
+        - 정상 범위면 그대로 int 리턴
+        """
+        if item_idx is None:
+            return None
+        if item_idx < 0 or item_idx >= self.item_factors.shape[0]:
+            return None
+        return item_idx
+
     def _compute_user_item_scores(
         self,
         user_idx: int,
@@ -76,10 +88,9 @@ class ALSReRanker:
         als_scores = np.zeros(len(item_indices), dtype=np.float32)
         u_vec = self.user_factors[user_idx]
 
-        for i, item_idx in enumerate(item_indices):
+        for i, raw_idx in enumerate(item_indices):
+            item_idx = self._normalize_item_index(raw_idx)
             if item_idx is None:
-                continue
-            if item_idx < 0 or item_idx >= self.item_factors.shape[0]:
                 continue
             i_vec = self.item_factors[item_idx]
             als_scores[i] = float(u_vec @ i_vec)
@@ -93,7 +104,6 @@ class ALSReRanker:
     ) -> Optional[np.ndarray]:
         """
         2단계: 장바구니 session_item_ids 기반 item2item 점수 계산
-
         - session_item_ids → item factor 평균 → 세션 벡터
         - 세션 벡터와 각 후보 아이템 factor의 dot-product
         - 유효한 세션 아이템이 하나도 없으면 None 반환
@@ -121,10 +131,9 @@ class ALSReRanker:
         s_vec = session_vecs.mean(axis=0)  # (K,)
 
         als_scores = np.zeros(len(item_indices), dtype=np.float32)
-        for i, item_idx in enumerate(item_indices):
+        for i, raw_idx in enumerate(item_indices):
+            item_idx = self._normalize_item_index(raw_idx)
             if item_idx is None:
-                continue
-            if item_idx < 0 or item_idx >= self.item_factors.shape[0]:
                 continue
             i_vec = self.item_factors[item_idx]
             als_scores[i] = float(s_vec @ i_vec)
@@ -140,7 +149,6 @@ class ALSReRanker:
     ) -> Optional[List[Dict[str, Any]]]:
         """
         검색 결과를 ALS 기반으로 재정렬.
-
         반환:
             - ALS를 사용한 경우: score_final 기준으로 정렬된 results
             - ALS로 점수를 줄 수 없는 경우(3단계): None
