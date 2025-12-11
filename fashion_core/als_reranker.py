@@ -65,17 +65,22 @@ class ALSReRanker:
             return np.zeros_like(x, dtype=np.float32)
         return (x - x_min) / (x_max - x_min)
 
-    def _normalize_item_index(self, item_idx: Optional[int]) -> Optional[int]:
+    def _validate_item_idx(
+        self,
+        idx: int,
+        context: str,
+    ) -> int:
         """
-        후보 아이템용 인덱스 정규화/검증:
-        - None 이거나 범위 밖이면 None 리턴 → 호출측에서 그냥 스킵
-        - 정상 범위면 그대로 int 리턴
+        item ALS index 검증 헬퍼
+        - 범위 밖이면: 인덱스 에러
+        (idx가 None인 경우는 호출부에서 미리 걸러야 함)
         """
-        if item_idx is None:
-            return None
-        if item_idx < 0 or item_idx >= self.item_factors.shape[0]:
-            return None
-        return item_idx
+        if idx < 0 or idx >= self.item_factors.shape[0]:
+            raise IndexError(
+                f"[ALSReRanker] item_idx out of range in {context}: "
+                f"idx={idx}, item_factors.shape={self.item_factors.shape}"
+            )
+        return idx
 
     def _compute_user_item_scores(
         self,
@@ -84,6 +89,8 @@ class ALSReRanker:
     ) -> np.ndarray:
         """
         1단계: user factor가 있는 경우 user→item 점수 계산
+        - cold 후보 아이템(None)은 ALS 스코어 0
+        - item2idx ↔ item_factors 범위 불일치는 에러
         """
         als_scores = np.zeros(len(item_indices), dtype=np.float32)
         u_vec = self.user_factors[user_idx]
@@ -91,10 +98,14 @@ class ALSReRanker:
         valid_positions: List[int] = []
         valid_indices: List[int] = []
         for pos, raw_idx in enumerate(item_indices):
-            item_idx = self._normalize_item_index(raw_idx)
-            if item_idx is None:
+            if raw_idx is None:
+                # cold 아이템
                 continue
-            valid_positions.append(pos)  # als_scores에서의 위치
+
+            item_idx = self._validate_item_idx(
+                raw_idx, context=f"user_item_index[i={pos}]"
+            )
+            valid_positions.append(pos)
             valid_indices.append(item_idx)
 
         if not valid_indices:
@@ -124,13 +135,8 @@ class ALSReRanker:
         for sid in session_item_ids:
             idx = self.item2idx.get(sid)
             if idx is None:
-                raise KeyError(
-                    f"Unknown item id in session: {sid}, 데이터 버전 확인바람"
-                )
-            if idx < 0 or idx >= self.item_factors.shape[0]:
-                raise IndexError(
-                    f"Item index out of range: sid={sid}, idx={idx}, 데이터 버전 확인바람"
-                )
+                continue
+            idx = self._validate_item_idx(idx, context=f"session_item_id={sid}")
             session_indices.append(idx)
 
         if not session_indices:
@@ -142,10 +148,12 @@ class ALSReRanker:
         s_vec = session_vecs.mean(axis=0)  # (K,)
 
         als_scores = np.zeros(len(item_indices), dtype=np.float32)
-        for i, raw_idx in enumerate(item_indices):
-            item_idx = self._normalize_item_index(raw_idx)
+        for i, item_idx in enumerate(item_indices):
             if item_idx is None:
                 continue
+            item_idx = self._validate_item_idx(
+                item_idx, context=f"candidate_item_index[i={i}]"
+            )
             i_vec = self.item_factors[item_idx]
             als_scores[i] = float(s_vec @ i_vec)
 
