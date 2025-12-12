@@ -28,3 +28,6 @@ ipykernel==6.28.0
 
 # recommand cf
 implicit==0.7.2
+
+#test
+pytest==9.0.2
