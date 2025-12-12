@@ -1,4 +1,4 @@
-# fashion_core/db_image_search_engine.py
+# fashion_core/db_image_engine.py
 # CLIP + FAISS + DB 기반 이미지 검색 엔진
 
 from __future__ import annotations

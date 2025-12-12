@@ -173,14 +173,14 @@ class BM25ClipFusionEngine:
         bm25_hits = self.text_engine.search(
             query=query,
             top_k=stage1_k,
-            conn=conn,  # ✅ conn 넘김
+            conn=conn,
         )
         logger.info("[Fusion] BM25 hits(stage1) = %d", len(bm25_hits))
 
         image_hits = self.image_engine.search(
             query=query,
             top_k=stage1_k,
-            conn=conn,  # ✅ conn 넘김
+            conn=conn,
         )
         logger.info("[Fusion] Image hits(stage1) = %d", len(image_hits))
 
