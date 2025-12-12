@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import sqlite3
 
 from common.text_normalization import tokenize  # 이미 쓰던 토크나이저
 
@@ -61,6 +62,11 @@ class MultiModalSearchEngine:
             w_image=w_image,
         )
 
+    def _get_connection(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(self.db_path))
+        conn.row_factory = sqlite3.Row
+        return conn
+
     def search(
         self,
         query: str,
@@ -70,11 +76,13 @@ class MultiModalSearchEngine:
         """
         서비스에서 바로 쓰기 좋은 JSON 스타일 결과 반환용 메서드.
         """
-        hits: List[FusionHit] = self.fusion_engine.search(
-            query=query,
-            top_k=top_k,
-            stage1_factor=stage1_factor,
-        )
+        with self._get_connection() as conn:
+            hits: List[FusionHit] = self.fusion_engine.search(
+                query=query,
+                top_k=top_k,
+                stage1_factor=stage1_factor,
+                conn=conn,
+            )
 
         results: List[Dict[str, Any]] = []
         for h in hits:

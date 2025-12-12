@@ -1,0 +1,18 @@
+service: "service.service:FashionSearchService"
+
+labels:
+  owner: "lsy"
+  project: "multimodal-fashion-recommend-search"
+
+include:
+  - "service/"
+  - "fashion_core/"
+  - "common/"
+  - "requirements.txt"
+
+python:
+  packages:
+    requirements_txt: "./requirements.txt"
+
+docker:
+  python_version: "3.11"
