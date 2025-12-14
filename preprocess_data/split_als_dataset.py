@@ -75,7 +75,7 @@ def split_by_user_time(
         test_df = df.iloc[0:0].copy()
 
     print(
-        f"[SPLIT] tail_k={tail_k}, " f"train: {len(train_df):,}, test: {len(test_df):,}"
+        f"[SPLIT] tail_k={tail_k}, " f"train: {len(train_df)}:,, test: {len(test_df)}:,"
     )
     return train_df, test_df
 

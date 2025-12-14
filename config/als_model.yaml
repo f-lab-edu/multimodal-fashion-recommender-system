@@ -5,7 +5,7 @@ w_als: 0.3  # 개인화 가중치
 
 
     # --train-jsonl data/als_splits_v2_alltrain/train.jsonl \
-    # --model-dir   models/als_warm_split_v1 \
+    # --model-dir   models/als_warm_v1 \
     # --image-index-path data/image_index_with_ids.faiss \
     # --db-path data/fashion_items.db \
     # --factors 32 \

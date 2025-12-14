@@ -28,7 +28,7 @@ def als_artifacts(tmp_path: Path) -> Dict[str, Path]:
     # 작은 행렬로 테스트
     # users 1명, items 4개, latent dim=2
 
-    user_factors = np.array([[1.0, 0.0]], dtype=np.float32)  # user_idx=0
+    user_factors = np.array([[1.0, 0.0]], dtype=np.float32)
     item_factors = np.array(
         [
             [1.0, 0.0],  # idx 0 -> "A"
