@@ -19,7 +19,7 @@ def tmp_index_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def engine(monkeypatch, tmp_db_path: Path, tmp_index_path: Path) -> DbImageSearchEngine:
+def engine(monkeypatch, mini_db: Path, tmp_index_path: Path) -> DbImageSearchEngine:
     """ """
 
     class FakeIndex:
@@ -31,22 +31,10 @@ def engine(monkeypatch, tmp_db_path: Path, tmp_index_path: Path) -> DbImageSearc
             scores = np.array([[0.9, 0.85, 0.8, 0.7, 0.6]], dtype=np.float32)[:, :k]
             return scores, ids
 
-    class DummyModel:
-        def to(self, device):
-            return self
-
-    class DummyProcessor:
-        pass
-
-    # faiss / clip 로딩을 전부 가짜로 교체
     monkeypatch.setattr(img_mod.faiss, "read_index", lambda _: FakeIndex())
-    monkeypatch.setattr(img_mod.CLIPModel, "from_pretrained", lambda _: DummyModel())
-    monkeypatch.setattr(
-        img_mod.CLIPProcessor, "from_pretrained", lambda _: DummyProcessor()
-    )
 
     eng = DbImageSearchEngine(
-        db_path=tmp_db_path,
+        db_path=mini_db,
         index_path=tmp_index_path,
         model_name="dummy",
         device="cpu",
@@ -69,10 +57,10 @@ def test_init_when_db_missing(tmp_path: Path, tmp_index_path: Path):
         )
 
 
-def test_init_when_index_missing(tmp_path: Path, tmp_db_path: Path):
+def test_init_when_index_missing(tmp_path: Path, mini_db: Path):
     with pytest.raises(FileNotFoundError):
         DbImageSearchEngine(
-            db_path=tmp_db_path,
+            db_path=mini_db,
             index_path=tmp_path / "no.faiss",
             model_name="dummy",
             device="cpu",
@@ -89,7 +77,7 @@ def test_normalize_unit_length():
 
 # search() 테스트
 def test_search_returns_hits_sorted_and_ranked(
-    monkeypatch, engine: DbImageSearchEngine, tmp_db_path: Path
+    monkeypatch, engine: DbImageSearchEngine, mini_db: Path
 ):
     def fake_load_item_meta_for_ids(conn, item_ids):
         return {
@@ -105,7 +93,7 @@ def test_search_returns_hits_sorted_and_ranked(
     monkeypatch.setattr(img_mod, "load_item_meta_for_ids", fake_load_item_meta_for_ids)
     monkeypatch.setattr(img_mod, "deduplicate_hits_by_asin", lambda hits, k: hits[:k])
 
-    with sqlite3.connect(tmp_db_path) as conn:
+    with sqlite3.connect(mini_db) as conn:
         out = engine.search("any query", conn=conn, top_k=3)
 
     assert isinstance(out, list)
@@ -122,9 +110,7 @@ def test_search_returns_hits_sorted_and_ranked(
     assert all(h.item_id >= 0 for h in out)
 
 
-def test_search_respects_top_k(
-    monkeypatch, engine: DbImageSearchEngine, tmp_db_path: Path
-):
+def test_search_respects_top_k(monkeypatch, engine: DbImageSearchEngine, mini_db: Path):
     monkeypatch.setattr(
         img_mod,
         "load_item_meta_for_ids",
@@ -132,14 +118,14 @@ def test_search_respects_top_k(
     )
     monkeypatch.setattr(img_mod, "deduplicate_hits_by_asin", lambda hits, k: hits[:k])
 
-    with sqlite3.connect(tmp_db_path) as conn:
+    with sqlite3.connect(mini_db) as conn:
         out = engine.search("shoes", conn=conn, top_k=1)
 
     assert len(out) == 1
 
 
 def test_search_returns_empty_when_no_valid_ids(
-    monkeypatch, tmp_db_path: Path, tmp_index_path: Path
+    monkeypatch, mini_db: Path, tmp_index_path: Path
 ):
     """index 결과가 전부 -1이면 [] 반환"""
 
@@ -165,7 +151,7 @@ def test_search_returns_empty_when_no_valid_ids(
     )
 
     eng = DbImageSearchEngine(
-        db_path=tmp_db_path,
+        db_path=mini_db,
         index_path=tmp_index_path,
         model_name="dummy",
         device="cpu",
@@ -175,7 +161,7 @@ def test_search_returns_empty_when_no_valid_ids(
     )
 
     # 메타/디듭은 호출되기 전에 return [] 되어야 함
-    conn = sqlite3.connect(tmp_db_path)
+    conn = sqlite3.connect(mini_db)
     out = eng.search("q", conn=conn, top_k=5)
     conn.close()
 
@@ -183,7 +169,7 @@ def test_search_returns_empty_when_no_valid_ids(
 
 
 def test_search_applies_deduplicate_by_asin(
-    monkeypatch, engine: DbImageSearchEngine, tmp_db_path: Path
+    monkeypatch, engine: DbImageSearchEngine, mini_db: Path
 ):
     # 101과 103이 같은 asin이라고 가정
     def fake_load_item_meta_for_ids(conn, item_ids):
@@ -207,7 +193,7 @@ def test_search_applies_deduplicate_by_asin(
     monkeypatch.setattr(img_mod, "load_item_meta_for_ids", fake_load_item_meta_for_ids)
     monkeypatch.setattr(img_mod, "deduplicate_hits_by_asin", fake_dedup)
 
-    conn = sqlite3.connect(tmp_db_path)
+    conn = sqlite3.connect(mini_db)
     out = engine.search("red", conn=conn, top_k=10)
     conn.close()
 
