@@ -1,8 +1,8 @@
 # User setting
 data/
 test/
-models/
 service/test.py
+models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
