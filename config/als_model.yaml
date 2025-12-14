@@ -2,3 +2,13 @@
 model_dir: "models/als_warm_v1" # 모델 저장 디렉터리
 model_version: "als_warm_v1_2025-12-03" # 로그/ 모니터링할때
 w_als: 0.3  # 개인화 가중치
+
+
+    # --train-jsonl data/als_splits_v2_alltrain/train.jsonl \
+    # --model-dir   models/als_warm_split_v1 \
+    # --image-index-path data/image_index_with_ids.faiss \
+    # --db-path data/fashion_items.db \
+    # --factors 32 \
+    # --regularization 1e-5 \
+    # --iterations 10 \
+    # --alpha 10.0

@@ -79,7 +79,7 @@ class FashionSearchService:
           "query": "black linen shirts",
           "user_id": "AE23BYWB52METWQVHSPN3MKN7AJA",      // optional
           "session_item_ids": ["B08FGCD1FC", "B09JB7H124"],      // optional
-          "top_k": 50,
+          "top_k": 10,
           "stage1_factor": 3
         }
         """

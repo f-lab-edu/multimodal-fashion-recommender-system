@@ -9,12 +9,12 @@ from recommend.als_trainer import ALSTrainer
 
 """
 python -m recommend.train_als \
-    --train-jsonl data/als_splits_v3/train.jsonl \
-    --model-dir   models/als_warm_split_v3 \
+    --train-jsonl data/als_splits_v2_alltrain/train.jsonl \
+    --model-dir   models/als_warm_v1 \
     --image-index-path data/image_index_with_ids.faiss \
     --db-path data/fashion_items.db \
     --factors 32 \
-    --regularization 1e-6 \
+    --regularization 1e-5 \
     --iterations 10 \
     --alpha 10.0
 """

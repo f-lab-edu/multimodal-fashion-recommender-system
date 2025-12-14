@@ -58,3 +58,5 @@ multimodal-fashion-recommender-system
 │  ├─ als_io.py                        # ALS 학습/로딩용 데이터 IO
 │  ├─ text_normalization.py            # 텍스트 검색 쿼리 전처리
 ```
+
+## 아키텍처 특징

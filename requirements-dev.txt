@@ -13,3 +13,7 @@ jupyter
 
 # 시각화
 matplotlib
+
+pytest==9.0.2
+notebook==6.5.4
+ipykernel==6.28.0
