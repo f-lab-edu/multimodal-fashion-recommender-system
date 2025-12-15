@@ -1,15 +1,13 @@
-# 기본 예시 — 필요에 맞게 수정하세요
-# PyTorch CUDA 휠 인덱스
---extra-index-url https://download.pytorch.org/whl/cu121
+# serve
+bentoml==1.4.30
 
-# Core DL (CUDA)
+# Core DL (CPU)
 torch==2.4.0
 torchvision==0.19.0
 
 # Utils / Numerics
 numpy==1.26.4
 Pillow==10.4.0
-
 
 # Embedding / Models
 transformers==4.45.2
@@ -20,11 +18,7 @@ safetensors==0.4.5
 rank_bm25==0.2.2
 implicit==0.7.2
 
-# Vector Search (GPU)
-faiss-gpu-cu12==1.12.0
+# Vector Search (CPU)
+faiss-cpu==1.8.0.post1
 
-notebook==6.5.4
-ipykernel==6.28.0
-
-# recommand cf
-implicit==0.7.2
+nltk==3.9.2

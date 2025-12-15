@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multimodal-fashion-recommender-system"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "rank-bm25",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "ruff",
+]
+
+search = [
+  "faiss-gpu",
+  "torch",
+  "transformers",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fashion_core*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

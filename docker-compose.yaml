@@ -1,0 +1,20 @@
+services:
+  multimodal-fashion-search:
+    image: leesangyoungugu/multimodal-fashion-search:20251204_v1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DB_PATH: /app/data/fashion_items.db
+      BM25_PATH: /app/data/bm25_from_item_docs.pkl
+      IMAGE_INDEX_PATH: /app/data/image_index_with_ids.faiss
+      ALS_CONFIG_PATH: /app/config/als_model.yaml
+    volumes:
+      - ./data/fashion_items.db:/app/data/fashion_items.db:ro
+      - ./data/bm25_from_item_docs.pkl:/app/data/bm25_from_item_docs.pkl:ro
+      - ./data/image_index_with_ids.faiss:/app/data/image_index_with_ids.faiss:ro
+      - ./config:/app/config:ro
+      - ./models:/app/models:ro
+    restart: unless-stopped

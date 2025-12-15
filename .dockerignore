@@ -1,0 +1,25 @@
+# venv / caches
+.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# git / CI / tooling
+.git/
+.github/
+.pre-commit-config.yaml
+.gitignore
+
+# local env / dev-only
+.env
+requirements-dev.txt
+pyproject.toml
+
+# runtime에 안 쓰는 폴더(배포 방식에 따라 조정)
+data/
+models/
+preprocess_data/
+recommend/
+tests/

@@ -1,4 +1,4 @@
-# fashion_core/als_rerank_multimodal_engine.py
+# fashion_core/personalized_search_engine.py
 from __future__ import annotations
 
 import logging

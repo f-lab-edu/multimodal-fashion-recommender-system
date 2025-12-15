@@ -1,6 +1,7 @@
 # User setting
 data/
 test/
+service/test.py
 models/
 
 # Byte-compiled / optimized / DLL files
