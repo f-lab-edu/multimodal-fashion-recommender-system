@@ -5,6 +5,8 @@ import os
 
 import bentoml
 import torch
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from fashion_core.personalized_search_engine import PersonalizedSearchEngine
 
@@ -15,8 +17,13 @@ IMAGE_INDEX_PATH = Path(
 )
 ALS_CONFIG_PATH = Path(os.getenv("ALS_CONFIG_PATH", "config/als_model.yaml"))
 
+ui = FastAPI()
+ui_dir = Path(__file__).resolve().parents[1] / "ui"
+ui.mount("/", StaticFiles(directory=str(ui_dir), html=True), name="ui")
+
 
 @bentoml.service(name="fashion_search_service")
+@bentoml.asgi_app(ui, path="/ui")
 class FashionSearchService:
     """
     멀티모달 + ALS 개인화 검색 서비스
