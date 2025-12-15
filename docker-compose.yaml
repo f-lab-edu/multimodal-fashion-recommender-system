@@ -1,9 +1,9 @@
 services:
   multimodal-fashion-search:
-    image: leesangyoungugu/multimodal-fashion-search:20251204_v1
     build:
       context: .
       dockerfile: Dockerfile
+    image: multimodal-fashion-search:latest
     ports:
       - "3000:3000"
     environment:

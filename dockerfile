@@ -17,7 +17,6 @@ RUN python -c "import nltk; nltk.download('stopwords', quiet=True)"
 COPY service/ /app/service/
 COPY fashion_core/ /app/fashion_core/
 COPY common/ /app/common/
-COPY ui /app/ui
 
 # data 안에 있는 거는 볼륨
 RUN mkdir -p /app/data /app/config

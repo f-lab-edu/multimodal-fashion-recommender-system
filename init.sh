@@ -7,7 +7,7 @@ set -euo pipefail
 PROJECT_NAME="${PROJECT_NAME:-fashion_recommand}"
 PYTHON_BIN="${PYTHON_BIN:-python3.11}"
 VENV_DIR="${VENV_DIR:-.venv}"
-REQ_FILE="${REQ_FILE:-requirements-dev.txt}"
+REQ_FILE="${REQ_FILE:-requirements.txt}"
 SETUP_SYSTEM_DEPS="${SETUP_SYSTEM_DEPS:-1}"  # 1이면 apt 설치 진행(WSL/Ubuntu)
 
 # -----------------------------
