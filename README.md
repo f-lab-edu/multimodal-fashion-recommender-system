@@ -67,17 +67,6 @@ multimodal-fashion-recommender-system
 git clone https://github.com/f-lab-edu/multimodal-fashion-recommender-system.git
 cd multimodal-fashion-recommender-system
 ```
-#### 2) Download assets (datas/model)
-```bash
-ASSETS_VER=v0.1.0
-OWNER=f-lab-edu
-REPO=multimodal-fashion-recommender-system
-curl -L -o assets.tar.gz \
-  https://github.com/${OWNER}/${REPO}/releases/download/${ASSETS_VER}/assets-${ASSETS_VER}.tar.gz
-
-mkdir -p data models
-tar -xzf assets.tar.gz
-```
 
 #### 3) Start
 ```bash

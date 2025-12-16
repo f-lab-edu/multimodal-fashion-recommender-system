@@ -1,9 +1,24 @@
 services:
+  fetch-assets:
+    image: alpine:3.20
+    working_dir: /work
+    environment:
+      OWNER: f-lab-edu
+      REPO: multimodal-fashion-recommender-system
+      DATA_ASSETS_VER: v0.1.0
+      MODEL_ASSETS_VER: m0.1.0
+    volumes:
+      - ./data:/work/data
+      - ./models:/work/models
+      - ./scripts:/work/scripts:ro
+    command: ["/bin/sh","-lc","apk add --no-cache curl && /work/scripts/fetch_assets.sh"]
+    restart: "no"
+
   multimodal-fashion-search:
-    image: leesangyoungugu/multimodal-fashion-search:20251204_v1
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/f-lab-edu/multimodal-fashion-recommender-system:latest
+    depends_on:
+      fetch-assets:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     environment:
@@ -12,9 +27,7 @@ services:
       IMAGE_INDEX_PATH: /app/data/image_index_with_ids.faiss
       ALS_CONFIG_PATH: /app/config/als_model.yaml
     volumes:
-      - ./data/fashion_items.db:/app/data/fashion_items.db:ro
-      - ./data/bm25_from_item_docs.pkl:/app/data/bm25_from_item_docs.pkl:ro
-      - ./data/image_index_with_ids.faiss:/app/data/image_index_with_ids.faiss:ro
-      - ./config:/app/config:ro
+      - ./data:/app/data:ro
       - ./models:/app/models:ro
+      - ./config:/app/config:ro
     restart: unless-stopped
