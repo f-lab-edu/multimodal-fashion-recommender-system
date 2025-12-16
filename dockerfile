@@ -17,10 +17,11 @@ RUN python -c "import nltk; nltk.download('stopwords', quiet=True)"
 COPY service/ /app/service/
 COPY fashion_core/ /app/fashion_core/
 COPY common/ /app/common/
-COPY ui /app/ui
+COPY ui/ /app/ui
+COPY config/ /app/config
 
-# data 안에 있는 거는 볼륨
-RUN mkdir -p /app/data /app/config
+# data, models 은 볼륨
+RUN mkdir -p /app/data /app/models
 
 EXPOSE 3000
 
