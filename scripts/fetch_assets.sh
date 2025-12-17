@@ -1,9 +1,9 @@
 # scripts/fetch_assets.sh
 set -eu
-: "${OWNER:f-lab-edu}"
-: "${REPO:multimodal-fashion-recommender-system}"
-: "${DATA_ASSETS_VER:v0.1.0}"
-: "${MODEL_ASSETS_VER:m0.1.0}"
+: "${OWNER:=f-lab-edu}"
+: "${REPO:=multimodal-fashion-recommender-system}"
+: "${DATA_ASSETS_VER:=v0.1.0}"
+: "${MODEL_ASSETS_VER:=m0.1.0}"
 
 DATA_ASSET="assets-data-${DATA_ASSETS_VER}.tar.gz"
 MODEL_ASSET="assets-model-${MODEL_ASSETS_VER}.tar.gz"
