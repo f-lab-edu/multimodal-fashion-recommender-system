@@ -38,6 +38,7 @@
 | Personalization | ALS (Implicit) |
 | Storage | SQLite |
 | Data/Utils | NumPy, Pandas |
+| Container | Docker |
 
 ## Project Structure
 
