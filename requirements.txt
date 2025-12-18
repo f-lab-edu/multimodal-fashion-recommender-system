@@ -1,5 +1,6 @@
 # serve
 bentoml==1.4.30
+fastapi==0.124.4
 
 # Core DL (CPU)
 torch==2.4.0
