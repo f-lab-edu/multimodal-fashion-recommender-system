@@ -1,4 +1,4 @@
-name: test_code
+name: test_code pass
 
 on:
   pull_request:
@@ -26,6 +26,13 @@ jobs:
           pip install -r requirements.txt
           python -m pip install -U pytest
           python -m pip install -U pyyaml
+
+      - name: Download NLTK stopwords
+        run: |
+          python - <<'PY'
+          import nltk
+          nltk.download("stopwords", quiet=True)
+          PY
 
       - name: Run tests
         run: |
