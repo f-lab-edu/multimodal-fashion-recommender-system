@@ -28,7 +28,5 @@ jobs:
           python -m pip install -U pyyaml
 
       - name: Run tests
-        env:
-          PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest -q
+          PYTHONPATH="${GITHUB_WORKSPACE}" python -m pytest -q
