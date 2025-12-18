@@ -17,6 +17,7 @@ if [ -f "/work/data/.ready-${DATA_ASSETS_VER}" ]; then
 else
   echo "[fetch] download ${DATA_ASSET}"
   curl -fL -o "/tmp/${DATA_ASSET}" "${BASE}/${DATA_ASSETS_VER}/${DATA_ASSET}"
+  rm -rf /work/data/*
   tar -xzf "/tmp/${DATA_ASSET}" -C /work/data
   touch "/work/data/.ready-${DATA_ASSETS_VER}"
 fi
@@ -26,6 +27,7 @@ if [ -f "/work/models/.ready-${MODEL_ASSETS_VER}" ]; then
 else
   echo "[fetch] download ${MODEL_ASSET}"
   curl -fL -o "/tmp/${MODEL_ASSET}" "${BASE}/${MODEL_ASSETS_VER}/${MODEL_ASSET}"
+  rm -rf /work/models/*
   tar -xzf "/tmp/${MODEL_ASSET}" -C /work/models
   touch "/work/models/.ready-${MODEL_ASSETS_VER}"
 fi

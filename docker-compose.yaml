@@ -5,17 +5,17 @@ services:
     environment:
       OWNER: f-lab-edu
       REPO: multimodal-fashion-recommender-system
-      DATA_ASSETS_VER: v0.1.0
+      DATA_ASSETS_VER: d0.1.0
       MODEL_ASSETS_VER: m0.1.0
     volumes:
       - ./data:/work/data
       - ./models:/work/models
       - ./scripts:/work/scripts:ro
-    command: ["/bin/sh","-lc","apk add --no-cache curl && /work/scripts/fetch_assets.sh"]
+    command: ["/bin/sh","-lc","apk add --no-cache curl jq tar && /work/scripts/fetch_assets.sh"]
     restart: "no"
 
   multimodal-fashion-search:
-    image: ghcr.io/f-lab-edu/multimodal-fashion-recommender-system:latest
+    image: ghcr.io/f-lab-edu/multimodal-fashion-recommender-system:${APP_VER:-v0.1.0}
     depends_on:
       fetch-assets:
         condition: service_completed_successfully
