@@ -60,6 +60,16 @@ multimodal-fashion-recommender-system
 │  ├─ text_normalization.py            # 텍스트 검색 쿼리 전처리
 ```
 
+## 서비스 아키텍처
+<img src = "./docs/서비스 아키텍처.png">
+
+## 시퀀스다이어그램
+<img src = "./docs/시퀀스다이어그램.png">
+
+## 실행화면 예시
+<img src = "./docs/ui 이미지.png">
+<img src = "./docs/검색 결과 이미지.png">
+
 ## 실행 방법 (Docker Compose)
 #### 1) Clone
 ```bash
