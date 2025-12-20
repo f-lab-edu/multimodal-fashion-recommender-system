@@ -45,7 +45,7 @@
     <div class="row">
       <div class="field" style="min-width:320px;">
         <label>query *</label>
-        <input id="query" placeholder="예: black linen shirts" value="red v-neck dress" />
+        <input id="query" placeholder="예: red v-neck dress" value="red v-neck dress" />
       </div>
 
       <div class="field" style="min-width:320px;">
@@ -238,7 +238,7 @@
   $("query").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
 
   $("btnExample").addEventListener("click", () => {
-    $("query").value = "black linen shirts";
+    $("query").value = "red v-neck dress";
     $("userId").value = "AE23BYWB52METWQVHSPN3MKN7AJA";
     $("topK").value = "10";
     $("stage1Factor").value = "3";

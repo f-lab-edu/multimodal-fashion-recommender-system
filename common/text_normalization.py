@@ -21,7 +21,7 @@ PHRASE_NORMALIZATION = [
     # tee shirt(s)
     (re.compile(r"\btee\s+shirt(s)?\b", re.IGNORECASE), " TSHIRT_CANONICAL "),
     # tees → tshirt
-    (re.compile(r"\btees\b", re.IGNORECASE), " tsTSHIRT_CANONICALirt "),
+    (re.compile(r"\btees\b", re.IGNORECASE), " TSHIRT_CANONICAL "),
     # --- Sweatshirt 계열 ---
     # sweat shirt(s), sweatshirt(s)
     (re.compile(r"\bsweat\s*shirt(s)?\b", re.IGNORECASE), " sweatshirt "),

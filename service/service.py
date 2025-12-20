@@ -18,7 +18,7 @@ IMAGE_INDEX_PATH = Path(
 ALS_CONFIG_PATH = Path(os.getenv("ALS_CONFIG_PATH", "config/als_model.yaml"))
 
 ui = FastAPI()
-ui_dir = Path(__file__).resolve().parents[1] / "ui"
+ui_dir = Path(__file__).resolve().parent / "ui"
 ui.mount("/", StaticFiles(directory=str(ui_dir), html=True), name="ui")
 
 
